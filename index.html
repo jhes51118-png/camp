@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>華碩志工社 2025 智慧媒合與數據分析</title>
+    
+    <!-- 工具庫 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
+        .asus-blue { color: #005696; }
+        .bg-asus-blue { background-color: #005696; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-1px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+        .drop-zone { border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
+        .drop-zone.dragover { border-color: #005696; background-color: #e0f2fe; }
+        /* Tab 樣式 */
+        .tab-btn { padding: 10px 20px; font-weight: bold; color: #6b7280; border-bottom: 3px solid transparent; transition: all 0.3s; }
+        .tab-btn.active { color: #005696; border-bottom-color: #005696; }
+        /* 展開收合動畫 */
+        .allocation-list { transition: max-height 0.3s ease-out; overflow: hidden; max-height: 0; }
+        .allocation-list.open { max-height: 500px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <!-- 導航列 -->
+    <nav class="bg-asus-blue text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-hand-holding-heart text-2xl"></i>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">華碩志工社</h1>
+                    <p class="text-xs text-blue-200">2025 數位樂學營數據中心</p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                 <button onclick="document.getElementById('fileInput').click()" class="text-sm bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded transition shadow">
+                    <i class="fa-solid fa-folder-open mr-1"></i> 重新匯入資料
+                </button>
+                <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleMainFile(this.files)">
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-6 py-6">
+
+        <!-- 頁籤切換 -->
+        <div class="flex border-b border-gray-200 mb-6 bg-white rounded-t-lg px-4 shadow-sm">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active">
+                <i class="fa-solid fa-chart-pie mr-2"></i>數據儀表板
+            </button>
+            <button onclick="switchTab('matching')" id="tab-matching" class="tab-btn">
+                <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>智慧志願媒合
+            </button>
+        </div>
+
+        <!-- 尚未匯入檔案的提示 -->
+        <div id="upload-prompt" class="card p-12 text-center drop-zone cursor-pointer mb-8" onclick="document.getElementById('fileInput').click()">
+            <div class="text-gray-400 mb-4"><i class="fa-solid fa-cloud-arrow-up text-6xl"></i></div>
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">請先匯入志工報名總表</h2>
+            <p class="text-gray-500">支援 .xlsx (Excel) 或 .csv 檔案</p>
+        </div>
+
+        <!-- TAB 1: 數據儀表板 (Dashboard) -->
+        <div id="view-dashboard" class="hidden space-y-8">
+            <!-- 關鍵指標 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="card p-6 border-l-4 border-blue-600">
+                    <p class="text-gray-500 text-sm font-medium">總報名人數</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpi-people">0</h3>
+                </div>
+                <div class="card p-6 border-l-4 border-green-500">
+                    <p class="text-gray-500 text-sm font-medium">總支援人次</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpi-slots">0</h3>
+                </div>
+                <div class="card p-6 border-l-4 border-purple-500">
+                    <p class="text-gray-500 text-sm font-medium">人均參加場次</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpi-avg">0</h3>
+                </div>
+                <div class="card p-6 border-l-4 border-pink-500">
+                    <p class="text-gray-500 text-sm font-medium">男女比例</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpi-gender">0 : 0</h3>
+                </div>
+            </div>
+
+            <!-- 圖表區 -->
+            <div class="card p-6">
+                <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">報名意願詳細統計 (依據 O 欄位)</h3>
+                <div class="h-64"><canvas id="chart-intent"></canvas></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card p-6">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">各梯次熱門程度 (加總)</h3>
+                    <div class="h-64"><canvas id="chart-camps"></canvas></div>
+                </div>
+                <div class="card p-6">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">招募管道來源</h3>
+                    <div class="h-64"><canvas id="chart-source"></canvas></div>
+                </div>
+            </div>
+            
+            <div class="card p-0 overflow-hidden">
+                 <div class="p-4 bg-gray-50 border-b"><h3 class="font-bold text-gray-700">所有志工清單</h3></div>
+                 <div class="overflow-auto max-h-[500px]">
+                     <table class="w-full text-sm text-left"><tbody id="table-top-list" class="bg-white divide-y divide-gray-200"></tbody></table>
+                 </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: 智慧志願媒合 (Matching) -->
+        <div id="view-matching" class="hidden space-y-6">
+            
+            <!-- 設定區 -->
+            <div class="card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-sliders mr-2 text-blue-600"></i>參數與名額設定</h2>
+                        <p class="text-sm text-gray-500 mt-1">設定分數權重與人數上限。系統將依分數排序進行分發 (多日營隊每人限2梯)。</p>
+                    </div>
+                    <div class="flex gap-2 mt-4 md:mt-0">
+                        <button onclick="exportSettings()" class="bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded hover:bg-gray-50 text-sm transition shadow-sm">
+                            <i class="fa-solid fa-file-export mr-1"></i> 匯出設定
+                        </button>
+                        <button onclick="document.getElementById('weightInput').click()" class="bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 text-sm transition shadow">
+                            <i class="fa-solid fa-file-import mr-1"></i> 匯入設定 (xlsx)
+                        </button>
+                        <input type="file" id="weightInput" accept=".xlsx" class="hidden" onchange="handleSettingsFile(this.files)">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- 權重設定 -->
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-3 border-b border-gray-200 pb-1">分數權重</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm" id="weights-display">
+                            <!-- JS 動態生成 -->
+                        </div>
+                    </div>
+                    <!-- 名額設定 -->
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-3 border-b border-gray-200 pb-1">各梯次名額上限</h3>
+                        <div class="grid grid-cols-1 gap-2 text-sm max-h-[200px] overflow-y-auto pr-2" id="capacities-display">
+                            <!-- JS 動態生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作按鈕 -->
+            <div class="flex justify-center my-6">
+                <button onclick="runMatching()" class="bg-green-600 text-white px-8 py-3 rounded-full text-lg font-bold shadow-lg hover:bg-green-500 transition transform hover:scale-105 active:scale-95">
+                    <i class="fa-solid fa-calculator mr-2"></i> 開始智慧分發 (支援多重錄取)
+                </button>
+            </div>
+
+            <!-- 計算結果表格 -->
+            <div id="matching-results-container" class="hidden card p-0 overflow-hidden mb-8">
+                <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800"><i class="fa-solid fa-list-check mr-2 text-green-600"></i>分發詳細清單 (依分數排序)</h3>
+                    <button onclick="exportMatchingResults()" class="bg-gray-800 text-white px-4 py-1.5 rounded text-sm hover:bg-gray-700 transition">
+                        <i class="fa-solid fa-file-export mr-1"></i> 匯出含「AI幫你選」的完整總表
+                    </button>
+                </div>
+                <div class="overflow-auto max-h-[500px]">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-6 py-3">姓名</th>
+                                <th class="px-6 py-3">身份標籤</th>
+                                <th class="px-6 py-3">分發結果</th>
+                                <th class="px-6 py-3">原始志願序</th>
+                                <th class="px-6 py-3 text-right">適配總分</th>
+                                <th class="px-6 py-3">分數細節</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-matching-list" class="bg-white divide-y divide-gray-200">
+                            <!-- JS 生成結果 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 新增：各梯次分配總覽 -->
+            <div id="allocation-results-container" class="hidden card p-6 bg-white border border-gray-200">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">
+                    <i class="fa-solid fa-users-viewfinder mr-2 text-blue-600"></i>各梯次分配總覽
+                </h3>
+                <p class="text-sm text-gray-500 mb-4">點擊下方卡片可展開/收合查看該梯次分配到的志工名單。</p>
+                
+                <div id="allocation-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- JS 生成各梯次卡片 -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript 邏輯核心 -->
+    <script>
+        // 全域變數
+        let globalVolunteers = [];
+        
+        // 預設權重
+        let globalWeights = {
+            "志願1": 100,
+            "志願2": 80,
+            "志願3": 60,
+            "志願4": 40,
+            "志願5": 20,
+            "每日加給": 10,   // 每多一天營隊加分
+            "年資/年": 5,     // 每年年資加分
+            "畢業生": 30,     // 畢業生加分
+            "課程組": 50,      // 課程開發組加分
+            "資深志工": 20    // 手動判斷的資深標籤
+        };
+
+        // 預設名額 (將在載入後初始化)
+        let globalCapacities = {};
+
+        // 營隊天數定義 (依據檔名判斷)
+        // 大於1為多日營隊，等於1為單日營隊
+        const CAMP_DAYS = {
+            "6/7大橋": 1,
+            "10/18逸仙": 1,
+            "11/1逸仙": 1,
+            "7/3-7/6彰化同安": 4,
+            "8/1-8/4台南樹林": 4,
+            "8/28-8/31南投都達": 4,
+            "9/20-9/21烏來龜山": 2
+        };
+
+        const CONFIG = {
+            NAME: "中文姓名",
+            NICKNAME: "我的志工小名",
+            ID: "工號",
+            GENDER: "M/F",
+            SOURCE: "如何得知志工社招募訊息？",
+            DIET: "飲食特殊需求 (素食者、易過敏食物...等請標註)",
+            CAMPS_DETAIL: "我要報名以下梯次(可複選)",
+            // 志願序欄位 (Camp Columns)
+            CAMPS: Object.keys(CAMP_DAYS)
+        };
+
+        // 初始化名額
+        CONFIG.CAMPS.forEach(camp => {
+            globalCapacities[camp] = 25; // 預設 25 人
+        });
+
+        // 追蹤每位志工的分發狀態 (用於匯出)
+        let volunteerAssignmentsMap = {};
+
+        // --- 檔案處理邏輯 ---
+
+        function handleMainFile(files) {
+            if (files.length === 0) return;
+            const file = files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {defval: ""});
+                    
+                    processMainData(jsonData);
+                    
+                    // UI 切換
+                    document.getElementById('upload-prompt').classList.add('hidden');
+                    document.getElementById('view-dashboard').classList.remove('hidden');
+                    
+                    // 刷新設定顯示
+                    renderSettings();
+                } catch (err) {
+                    alert("讀取檔案失敗：" + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processMainData(rawData) {
+            // 1. 資料正規化 (Normalize)：去除標題欄位的多餘空白
+            const normalizedData = rawData.map(row => {
+                const newRow = {};
+                Object.keys(row).forEach(key => {
+                    newRow[key.trim()] = row[key]; // 去除 Key 的前後空白
+                });
+                return newRow;
+            });
+
+            // 2. 清洗資料
+            globalVolunteers = normalizedData.filter(row => {
+                const name = row[CONFIG.NAME];
+                return name && String(name).trim() !== "" && String(row[CONFIG.ID]).trim() !== "統計";
+            });
+
+            // 更新 Dashboard
+            updateDashboard(globalVolunteers);
+        }
+
+        // --- Dashboard 邏輯 (簡化版) ---
+        function updateDashboard(volunteers) {
+            // 1. 基本計數
+            let totalSlots = 0, m = 0, f = 0;
+            let campCounts = {}, sourceCounts = {}, intentCounts = {};
+            CONFIG.CAMPS.forEach(c => campCounts[c] = 0);
+
+            volunteers.forEach(p => {
+                // 營隊
+                CONFIG.CAMPS.forEach(c => {
+                    // 這裡也加入簡易判斷，如果有值就算參加
+                    const val = p[c];
+                    if (val && String(val).trim() !== "") {
+                        campCounts[c]++;
+                        totalSlots++;
+                    }
+                });
+                // 性別
+                const g = String(p[CONFIG.GENDER] || "").toUpperCase().trim();
+                if (g === 'M' || g === '男') m++; else if (g === 'F' || g === '女') f++;
+                // 來源
+                let src = String(p[CONFIG.SOURCE] || "未填寫").trim();
+                sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+                // 詳細意願
+                let detail = String(p[CONFIG.CAMPS_DETAIL] || "");
+                detail.split(/[;；]/).forEach(s => {
+                    s = s.trim();
+                    if(s) intentCounts[s] = (intentCounts[s] || 0) + 1;
+                });
+            });
+
+            // 更新 DOM
+            document.getElementById('kpi-people').innerText = volunteers.length;
+            document.getElementById('kpi-slots').innerText = totalSlots;
+            document.getElementById('kpi-avg').innerText = volunteers.length ? (totalSlots/volunteers.length).toFixed(1) : 0;
+            document.getElementById('kpi-gender').innerText = `${m} : ${f}`;
+
+            renderCharts(campCounts, sourceCounts, intentCounts);
+            renderVolunteerList(volunteers);
+        }
+
+        // --- 智慧媒合邏輯 (Matching) ---
+
+        function renderSettings() {
+            // 權重
+            const wContainer = document.getElementById('weights-display');
+            wContainer.innerHTML = '';
+            Object.entries(globalWeights).forEach(([key, val]) => {
+                wContainer.innerHTML += `
+                    <div class="bg-gray-50 p-2 rounded border border-gray-200 flex flex-col">
+                        <label class="text-xs text-gray-500 font-bold mb-1">${key}</label>
+                        <input type="number" value="${val}" 
+                            onchange="globalWeights['${key}'] = Number(this.value)"
+                            class="w-full border border-gray-300 rounded px-2 py-1 text-blue-800 font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                `;
+            });
+
+            // 名額
+            const cContainer = document.getElementById('capacities-display');
+            cContainer.innerHTML = '';
+            Object.entries(globalCapacities).forEach(([camp, val]) => {
+                cContainer.innerHTML += `
+                    <div class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200">
+                        <span class="text-sm text-gray-700 font-medium truncate w-2/3" title="${camp}">${camp}</span>
+                        <div class="flex items-center w-1/3">
+                            <input type="number" value="${val}" 
+                                onchange="globalCapacities['${camp}'] = Number(this.value)"
+                                class="w-full border border-gray-300 rounded px-2 py-1 text-right text-green-700 font-bold focus:ring-2 focus:ring-green-500 outline-none">
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function exportSettings() {
+            let exportData = [];
+            // 權重
+            Object.entries(globalWeights).forEach(([key, val]) => {
+                exportData.push({ "項目類別": "分數權重", "項目名稱": key, "數值": val });
+            });
+            // 名額
+            Object.entries(globalCapacities).forEach(([key, val]) => {
+                exportData.push({ "項目類別": "名額上限", "項目名稱": `名額_${key}`, "數值": val });
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "系統設定");
+            XLSX.writeFile(wb, "2025志工媒合系統設定.xlsx");
+        }
+
+        function handleSettingsFile(files) {
+            if (files.length === 0) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                
+                // 解析
+                json.forEach(row => {
+                    const type = row["項目類別"];
+                    const name = row["項目名稱"] || row["評分項目"] || row["Item"]; 
+                    const val = row["數值"] || row["分數權重"] || row["Value"];
+
+                    if (name && val !== undefined) {
+                        if (String(name).startsWith("名額_")) {
+                            const campName = name.replace("名額_", "");
+                            if (globalCapacities.hasOwnProperty(campName)) {
+                                globalCapacities[campName] = Number(val);
+                            }
+                        } else {
+                            if (globalWeights.hasOwnProperty(name)) {
+                                globalWeights[name] = Number(val);
+                            }
+                        }
+                    }
+                });
+                renderSettings();
+                alert("設定已更新！(含權重與名額)");
+            };
+            reader.readAsArrayBuffer(files[0]);
+        }
+
+        // 核心：執行計算與分發
+        function runMatching() {
+            if (globalVolunteers.length === 0) {
+                alert("請先在儀表板頁面匯入志工資料！");
+                switchTab('dashboard');
+                return;
+            }
+
+            // 1. 初始化
+            // 記錄每個人的狀態：已錄取的營隊、已錄取的多日營隊數量
+            let volunteerState = {}; 
+            // 記錄所有有效的申請 (一個人可申請多個營隊)
+            let allApplications = [];
+
+            // 預處理：計算所有申請的分數
+            globalVolunteers.forEach(p => {
+                const pName = p[CONFIG.NAME];
+                
+                // 初始化狀態
+                volunteerState[pName] = {
+                    raw: p,
+                    assignedCamps: [],
+                    multiDayCount: 0,
+                    tags: []
+                };
+
+                // 判斷個人屬性 (身份標籤 & 基礎分)
+                let tags = [];
+                let personalScore = 0;
+                let id = String(p[CONFIG.ID] || "");
+                let source = String(p[CONFIG.SOURCE] || "");
+
+                // 身份加分
+                if (id.includes("畢業生") || id.includes("和碩生")) { tags.push("畢業生"); personalScore += (globalWeights["畢業生"] || 0); }
+                if (source.includes("課程") || id.includes("課程")) { tags.push("課程組"); personalScore += (globalWeights["課程組"] || 0); }
+                let seniority = Number(p["年資"] || 0);
+                if (seniority > 0) { tags.push(`年資${seniority}年`); personalScore += seniority * (globalWeights["年資/年"] || 0); }
+                if (source.includes("資深")) { tags.push("資深志工"); personalScore += (globalWeights["資深志工"] || 0); }
+                
+                volunteerState[pName].tags = tags;
+
+                // 產生申請單
+                CONFIG.CAMPS.forEach(campName => {
+                    let rankVal = p[campName]; // 志願序 (1, 2, 3...)
+                    let rank = null;
+
+                    // 資料容錯處理：處理非數字的輸入
+                    if (rankVal !== undefined && rankVal !== null && String(rankVal).trim() !== "") {
+                        let num = Number(rankVal);
+                        if (!isNaN(num)) {
+                            rank = num;
+                        } else {
+                            // 如果填寫的是 v, o, x, ok，視為志願 1
+                            const s = String(rankVal).trim().toLowerCase();
+                            if (["v", "o", "x", "ok", "yes", "true"].some(char => s.includes(char))) {
+                                rank = 1;
+                            }
+                        }
+                    }
+
+                    if (rank !== null && rank > 0) {
+                        // 基礎志願分
+                        let rankScore = globalWeights[`志願${rank}`] || 0;
+                        // 天數加給 (這會讓多日營隊分數較高，自然優先處理)
+                        const days = CAMP_DAYS[campName] || 1;
+                        const dayBonus = days * (globalWeights["每日加給"] || 0);
+                        // 總分
+                        const totalScore = personalScore + rankScore + dayBonus;
+
+                        allApplications.push({
+                            name: pName,
+                            camp: campName,
+                            rank: rank,
+                            score: totalScore,
+                            details: `基礎:${personalScore} + 志願${rank}:${rankScore} + 天數:${dayBonus}`,
+                            tags: tags.join(", "),
+                            isMultiDay: days > 1 // 標記是否為多日
+                        });
+                    }
+                });
+            });
+
+            // 2. 排序：依總分由高到低 (這是核心，高分者優先選)
+            allApplications.sort((a, b) => b.score - a.score);
+
+            // 3. 貪婪分發
+            let currentCounts = {}; // 各梯次目前人數
+            CONFIG.CAMPS.forEach(c => currentCounts[c] = 0);
+            
+            let finalResults = []; // 用於顯示列表
+            
+            // 處理所有申請
+            allApplications.forEach(app => {
+                const limit = globalCapacities[app.camp] || 25;
+                const pState = volunteerState[app.name];
+
+                // 檢查1: 該梯次是否已滿
+                if (currentCounts[app.camp] >= limit) {
+                    // 該梯次額滿，此申請落選
+                    return; 
+                }
+
+                // 檢查2: 個人限制 (多日營隊最多 2 梯)
+                if (app.isMultiDay && pState.multiDayCount >= 2) {
+                    // 多日營隊額度已滿，此申請略過 (但如果是單日營隊則不擋)
+                    return; 
+                }
+
+                // --- 成功分發 ---
+                currentCounts[app.camp]++;
+                pState.assignedCamps.push(app.camp);
+                if (app.isMultiDay) {
+                    pState.multiDayCount++;
+                }
+
+                finalResults.push({
+                    name: app.name,
+                    tags: app.tags || "一般",
+                    bestCamp: app.camp,
+                    bestRank: app.rank,
+                    totalScore: app.score,
+                    details: app.details,
+                    status: "成功"
+                });
+            });
+
+            // 4. 處理完全落選者 (用於顯示在落選區)
+            Object.keys(volunteerState).forEach(vName => {
+                const state = volunteerState[vName];
+                // 如果沒有任何錄取紀錄
+                if (state.assignedCamps.length === 0) {
+                     finalResults.push({
+                        name: vName,
+                        tags: state.tags.join(", ") || "一般",
+                        bestCamp: "落選 / 候補",
+                        bestRank: "-",
+                        totalScore: 0,
+                        details: "分數未達標或額滿或格式錯誤",
+                        status: "落選"
+                    });
+                }
+            });
+
+            // 更新全域狀態供匯出使用
+            volunteerAssignmentsMap = volunteerState;
+
+            // 排序結果 (成功者優先，再依分數)
+            finalResults.sort((a, b) => {
+                if (a.status === "成功" && b.status !== "成功") return -1;
+                if (a.status !== "成功" && b.status === "成功") return 1;
+                return b.totalScore - a.totalScore;
+            });
+
+            renderMatchingResults(finalResults);
+            renderAllocationOverview(finalResults, currentCounts);
+        }
+
+        function renderMatchingResults(data) {
+            const tbody = document.getElementById('table-matching-list');
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                let campClass = item.status === "成功" ? "text-blue-700 font-bold" : "text-red-500";
+                let scoreClass = item.status === "成功" ? "text-green-600" : "text-gray-400";
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50 transition border-b">
+                        <td class="px-6 py-4 font-bold text-gray-800">${item.name}</td>
+                        <td class="px-6 py-4"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">${item.tags}</span></td>
+                        <td class="px-6 py-4 ${campClass}">${item.bestCamp}</td>
+                        <td class="px-6 py-4 text-center"><span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-bold">${item.bestRank}</span></td>
+                        <td class="px-6 py-4 text-right font-mono text-lg font-bold ${scoreClass}">${item.totalScore}</td>
+                        <td class="px-6 py-4 text-xs text-gray-400">${item.details}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('matching-results-container').classList.remove('hidden');
+        }
+
+        function renderAllocationOverview(results, currentCounts) {
+            const grid = document.getElementById('allocation-grid');
+            grid.innerHTML = '';
+
+            // 1. 分組
+            const grouping = {};
+            // 初始化
+            CONFIG.CAMPS.forEach(c => grouping[c] = []);
+            grouping["落選 / 候補"] = [];
+
+            results.forEach(item => {
+                const camp = item.bestCamp;
+                if (!grouping[camp]) grouping[camp] = [];
+                grouping[camp].push(item);
+            });
+
+            // 2. 產生卡片
+            Object.entries(grouping).forEach(([campName, list]) => {
+                if (list.length === 0 && campName === "落選 / 候補") return;
+
+                const count = list.length;
+                const limit = globalCapacities[campName] || 0;
+                const isFull = campName !== "落選 / 候補" && count >= limit;
+                
+                const cardId = `alloc-${campName.replace(/\W/g, '')}`;
+                const headerColor = campName === "落選 / 候補" ? "text-red-600" : "text-gray-800";
+                const badgeColor = isFull ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800";
+                const statusText = campName === "落選 / 候補" ? `${count} 人` : `${count} / ${limit} 人`;
+
+                // 產生名單 HTML
+                const listHtml = list.map(p => `
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 px-2 rounded">
+                        <div class="flex items-center gap-2">
+                             <div class="w-2 h-2 rounded-full ${campName === "落選 / 候補" ? "bg-gray-400" : "bg-blue-500"}"></div>
+                             <span class="font-bold text-gray-700">${p.name}</span>
+                        </div>
+                        <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">${p.totalScore}分</span>
+                    </div>
+                `).join('');
+
+                grid.innerHTML += `
+                    <div class="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer group" onclick="toggleAllocation('${cardId}')">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-bold text-lg ${headerColor} truncate w-2/3" title="${campName}">${campName}</h4>
+                            <span class="${badgeColor} text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap">${statusText}</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mb-2 flex items-center">
+                            <i class="fa-solid fa-chevron-down mr-1 transition-transform duration-300" id="icon-${cardId}"></i>
+                            點擊查看名單
+                        </div>
+                        <div id="${cardId}" class="allocation-list bg-gray-50 rounded px-2">
+                            ${listHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('allocation-results-container').classList.remove('hidden');
+        }
+
+        // 展開/收合卡片
+        function toggleAllocation(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById(`icon-${id}`);
+            if (el.classList.contains('open')) {
+                el.classList.remove('open');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                el.classList.add('open');
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // 修改後的匯出功能：完整原始資料 + AI幫你選
+        function exportMatchingResults() {
+            if (globalVolunteers.length === 0) return;
+            
+            // 複製一份原始資料，避免修改到原始 globalVolunteers
+            const exportData = globalVolunteers.map(row => {
+                // 淺拷貝
+                const newRow = { ...row };
+                const name = newRow[CONFIG.NAME];
+                
+                // 取得該志工的分配結果
+                const state = volunteerAssignmentsMap[name];
+                let assignedText = "";
+                
+                if (state && state.assignedCamps.length > 0) {
+                    assignedText = state.assignedCamps.join(" ; ");
+                } else {
+                    assignedText = "未錄取 / 候補";
+                }
+                
+                // 新增欄位
+                newRow["AI幫你選"] = assignedText;
+                return newRow;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "分配總表");
+            XLSX.writeFile(wb, "2025志工分發總結果.xlsx");
+        }
+
+        // --- 輔助函式 ---
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-matching').classList.add('hidden');
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+        }
+
+        // Chart.js 繪圖
+        let charts = {};
+        function renderCharts(campData, sourceData, intentData) {
+            Object.values(charts).forEach(c => c.destroy());
+            
+            Chart.defaults.font.family = "'Noto Sans TC', sans-serif";
+            Chart.defaults.color = '#6b7280';
+
+            const sortedIntent = Object.entries(intentData).sort((a,b) => b[1]-a[1]);
+            charts.intent = new Chart(document.getElementById('chart-intent'), {
+                type: 'bar',
+                data: {
+                    labels: sortedIntent.map(x=>x[0]),
+                    datasets: [{ label: '勾選人數', data: sortedIntent.map(x=>x[1]), backgroundColor: '#10b981', borderRadius:4 }]
+                },
+                options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: {display:false} } }
+            });
+
+            const sortedCamps = Object.entries(campData).sort((a,b) => b[1]-a[1]);
+            charts.camps = new Chart(document.getElementById('chart-camps'), {
+                type: 'bar',
+                data: {
+                    labels: sortedCamps.map(x=>x[0]),
+                    datasets: [{ label: '人次', data: sortedCamps.map(x=>x[1]), backgroundColor: '#3b82f6', borderRadius:4 }]
+                },
+                options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: {display:false} } }
+            });
+
+            const sortedSource = Object.entries(sourceData).sort((a,b) => b[1]-a[1]).slice(0,8);
+            charts.source = new Chart(document.getElementById('chart-source'), {
+                type: 'bar',
+                data: {
+                    labels: sortedSource.map(x=>x[0]),
+                    datasets: [{ label: '人數', data: sortedSource.map(x=>x[1]), backgroundColor: 'rgba(59,130,246,0.6)', borderRadius:4 }]
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: {display:false} } }
+            });
+        }
+
+        function renderVolunteerList(list) {
+            const tbody = document.getElementById('table-top-list');
+            tbody.innerHTML = list.map((p, i) => `
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="px-6 py-3 font-bold text-gray-500">#${i+1}</td>
+                    <td class="px-6 py-3 font-bold text-gray-800">${p[CONFIG.NAME]}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">${String(p[CONFIG.CAMPS_DETAIL]||"").replace(/[;；]/g, '<br>')}</td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
