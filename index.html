@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>華碩志工社 2026 智慧媒合與數據分析 (B表單精確版)</title>
+    <title>華碩志工社 2026 智慧媒合與數據分析 (看板拖曳精確版)</title>
     
     <!-- 工具庫 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,11 +28,23 @@
         .table-container { max-height: 500px; overflow-y: auto; }
         thead th { position: sticky; top: 0; z-index: 10; background-color: #f3f4f6; }
         .modal { transition: opacity 0.25s ease; }
-        body.modal-active { overflow-x: hidden; overflow-y: visible !important; }
+        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
+        
         /* 狀態標籤樣式 */
         .badge-success { background-color: #d1fae5; color: #065f46; font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; display: inline-block; margin-bottom: 2px;}
         .badge-fail { background-color: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; display: inline-block; margin-bottom: 2px; text-decoration: line-through;}
-        .badge-info { background-color: #eff6ff; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; display: inline-block; margin-bottom: 2px;}
+        .badge-limit { background-color: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; display: inline-block; margin-bottom: 2px; border: 1px dashed #f59e0b;}
+        
+        /* Kanban 拖曳專用樣式 */
+        .kanban-col-scroll::-webkit-scrollbar { width: 6px; }
+        .kanban-col-scroll::-webkit-scrollbar-track { background: transparent; }
+        .kanban-col-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .kanban-board-scroll::-webkit-scrollbar { height: 10px; }
+        .kanban-board-scroll::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px;}
+        .kanban-board-scroll::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 10px; }
+        .kanban-card { cursor: grab; transition: transform 0.1s, box-shadow 0.1s; }
+        .kanban-card:active { cursor: grabbing; transform: scale(0.98); }
+        .kanban-drop-active { background-color: #e0f2fe !important; border: 2px dashed #3b82f6 !important; }
     </style>
 </head>
 <body>
@@ -43,14 +55,19 @@
                 <i class="fa-solid fa-hand-holding-heart text-2xl"></i>
                 <div>
                     <h1 class="text-xl font-bold tracking-wide">華碩志工社 (2026 B表單專屬版)</h1>
-                    <p class="text-xs text-blue-200">第一志願優先分發系統</p>
+                    <p class="text-xs text-blue-200">階層式志願優先分發系統</p>
                 </div>
             </div>
             <div class="flex gap-4">
-                 <button onclick="document.getElementById('fileInput').click()" class="text-sm bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded transition shadow">
-                    <i class="fa-solid fa-folder-open mr-1"></i> 重新匯入資料
+                 <button onclick="window.document.getElementById('fileInput').click()" class="text-sm bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded transition shadow">
+                    <i class="fa-solid fa-folder-open mr-1"></i> 匯入原始報名表
                 </button>
-                <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleMainFile(this.files)">
+                <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" class="hidden" onchange="window.handleMainFile(this.files)">
+                
+                <button onclick="window.document.getElementById('importResultInput').click()" class="text-sm bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded transition shadow">
+                    <i class="fa-solid fa-file-import mr-1"></i> 匯入分發結果
+                </button>
+                <input type="file" id="importResultInput" accept=".csv, .xlsx, .xls" class="hidden" onchange="window.handleImportResult(this.files)">
             </div>
         </div>
     </nav>
@@ -58,18 +75,18 @@
     <div class="container mx-auto px-6 py-6">
 
         <div class="flex border-b border-gray-200 mb-6 bg-white rounded-t-lg px-4 shadow-sm">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active">
+            <button onclick="window.switchTab('dashboard')" id="tab-dashboard" class="tab-btn active">
                 <i class="fa-solid fa-chart-pie mr-2"></i>數據儀表板
             </button>
-            <button onclick="switchTab('matching')" id="tab-matching" class="tab-btn">
-                <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>智慧志願媒合 (優先制)
+            <button onclick="window.switchTab('matching')" id="tab-matching" class="tab-btn">
+                <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>智慧志願媒合 (階層優先制)
             </button>
         </div>
 
-        <div id="upload-prompt" class="card p-12 text-center drop-zone cursor-pointer mb-8" onclick="document.getElementById('fileInput').click()">
+        <div id="upload-prompt" class="card p-12 text-center drop-zone cursor-pointer mb-8" onclick="window.document.getElementById('fileInput').click()">
             <div class="text-gray-400 mb-4"><i class="fa-solid fa-cloud-arrow-up text-6xl"></i></div>
-            <h2 class="text-2xl font-bold text-gray-700 mb-2">請匯入 2026 最新版 (B.xlsx) 報名表</h2>
-            <p class="text-gray-500">系統將優先保障「第一志願」填寫者，並依據新版權重分配</p>
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">請匯入 2026 最新版報名表</h2>
+            <p class="text-gray-500">系統將自動解析「523」等排序數字，優先保障高志願序，超額再比分數。</p>
         </div>
 
         <!-- TAB 1: 數據儀表板 -->
@@ -88,7 +105,7 @@
                     <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpi-avg">0</h3>
                 </div>
                 <div class="card p-6 border-l-4 border-orange-500">
-                    <p class="text-gray-500 text-sm font-medium">第一志願填寫率</p>
+                    <p class="text-gray-500 text-sm font-medium">多日營志願填寫率</p>
                     <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpi-first">0%</h3>
                 </div>
             </div>
@@ -110,12 +127,11 @@
                         <h3 class="font-bold text-gray-700">最新志工清單 (匯入資料預覽)</h3>
                         <span class="text-xs text-gray-400">顯示所有人，包含報名細項</span>
                     </div>
-                    <!-- 新增：儀表板清單搜尋 -->
                     <div class="relative w-full sm:w-64">
                         <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                             <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                         </div>
-                        <input type="text" id="searchVolunteerInput" onkeyup="filterVolunteerList()" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2" placeholder="搜尋姓名...">
+                        <input type="text" id="searchVolunteerInput" onkeyup="window.filterVolunteerList()" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2" placeholder="搜尋姓名...">
                     </div>
                 </div>
                 <div class="table-container">
@@ -125,7 +141,7 @@
                                 <th class="px-6 py-3 bg-gray-50">#</th>
                                 <th class="px-6 py-3 bg-gray-50">姓名</th>
                                 <th class="px-6 py-3 bg-gray-50 w-1/3">報名梯次 (勾選項目)</th>
-                                <th class="px-6 py-3 bg-gray-50 w-1/3">第一志願</th>
+                                <th class="px-6 py-3 bg-gray-50 w-1/3">多日營志願排序</th>
                             </tr>
                         </thead>
                         <tbody id="table-top-list" class="bg-white divide-y divide-gray-200">
@@ -143,10 +159,10 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
                     <div>
                         <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-sliders mr-2 text-blue-600"></i>參數設定</h2>
-                        <p class="text-sm text-gray-500 mt-1">邏輯：第一志願優先錄取 > 權重分數排序。已加入「課程開發」權重。</p>
+                        <p class="text-sm text-gray-500 mt-1">邏輯：第1志願 > 第2志願 > 第3志願 > 權重分數。超額才比分數。</p>
                     </div>
                     <div class="flex gap-2 mt-4 md:mt-0">
-                        <button onclick="exportSettings()" class="bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded hover:bg-gray-50 text-sm transition shadow-sm">
+                        <button onclick="window.exportSettings()" class="bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded hover:bg-gray-50 text-sm transition shadow-sm">
                             <i class="fa-solid fa-file-export mr-1"></i> 匯出設定
                         </button>
                     </div>
@@ -155,7 +171,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- 權重設定 -->
                     <div>
-                        <h3 class="font-bold text-gray-700 mb-3 border-b border-gray-200 pb-1">加權分數調整</h3>
+                        <h3 class="font-bold text-gray-700 mb-3 border-b border-gray-200 pb-1">加權分數調整 (超額比拚用)</h3>
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm" id="weights-display">
                             <!-- JS 動態生成一般權重 -->
                         </div>
@@ -173,23 +189,23 @@
                     <!-- 名額設定與老手比例 -->
                     <div class="flex flex-col">
                         
-                        <!-- 新增功能：多日營隊錄取次數上限設定 -->
+                        <!-- 多日營隊錄取次數上限設定 -->
                         <div class="bg-purple-50 border border-purple-100 p-4 rounded-lg mb-6">
                             <h3 class="font-bold text-purple-800 mb-3 border-b border-purple-200 pb-1 flex items-center">
                                 <i class="fa-solid fa-user-gear mr-2"></i>多日營隊 錄取次數上限設定
                             </h3>
                             <div class="grid grid-cols-1 gap-3">
                                 <div class="flex justify-between items-center bg-white p-2 rounded border border-purple-100">
-                                    <span class="text-sm text-gray-700 font-medium">新手 (第一次參加)</span>
-                                    <input type="number" id="limit-newbie" value="2" min="1" max="10" class="w-16 border border-purple-300 rounded px-1 py-1 text-center text-purple-700 font-bold outline-none">
+                                    <span class="text-sm text-gray-700 font-medium">第一次參加</span>
+                                    <input type="number" id="limit-newbie" value="1" min="1" max="10" class="w-16 border border-purple-300 rounded px-1 py-1 text-center text-purple-700 font-bold outline-none">
                                 </div>
                                 <div class="flex justify-between items-center bg-white p-2 rounded border border-purple-100">
-                                    <span class="text-sm text-gray-700 font-medium">老手 - 華碩員工</span>
+                                    <span class="text-sm text-gray-700 font-medium">老手 (參加1年以上) - 華碩員工</span>
                                     <input type="number" id="limit-asus-vet" value="2" min="1" max="10" class="w-16 border border-purple-300 rounded px-1 py-1 text-center text-purple-700 font-bold outline-none">
                                 </div>
                                 <div class="flex justify-between items-center bg-white p-2 rounded border border-purple-100">
-                                    <span class="text-sm text-gray-700 font-medium">老手 - 非員工 (畢業生/眷屬等)</span>
-                                    <input type="number" id="limit-non-asus-vet" value="2" min="1" max="10" class="w-16 border border-purple-300 rounded px-1 py-1 text-center text-purple-700 font-bold outline-none">
+                                    <span class="text-sm text-gray-700 font-medium">非員工 (畢業生/眷屬等)</span>
+                                    <input type="number" id="limit-non-asus-vet" value="1" min="1" max="10" class="w-16 border border-purple-300 rounded px-1 py-1 text-center text-purple-700 font-bold outline-none">
                                 </div>
                             </div>
                         </div>
@@ -198,7 +214,7 @@
                             <h3 class="font-bold text-gray-700">各梯次名額上限 & 老手比例</h3>
                             <div class="flex items-center gap-2">
                                 <label class="text-xs font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded">老手保障比例 (%)</label>
-                                <input type="number" id="veteran-ratio-input" value="50" min="0" max="100" class="w-16 border border-indigo-300 rounded px-1 py-1 text-center text-indigo-700 font-bold outline-none" title="設定每個梯次保留給老手(參加2年以上經驗)的名額比例">
+                                <input type="number" id="veteran-ratio-input" value="50" min="0" max="100" class="w-16 border border-indigo-300 rounded px-1 py-1 text-center text-indigo-700 font-bold outline-none" title="設定每個梯次保留給老手(參加1年以上經驗)的名額比例">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 gap-2 text-sm max-h-[250px] overflow-y-auto pr-2" id="capacities-display">
@@ -209,27 +225,31 @@
             </div>
 
             <div class="flex justify-center my-6">
-                <button type="button" onclick="runMatching()" class="bg-green-600 text-white px-8 py-3 rounded-full text-lg font-bold shadow-lg hover:bg-green-500 transition transform hover:scale-105 active:scale-95 cursor-pointer">
-                    <i class="fa-solid fa-calculator mr-2"></i> 執行優先分發 (第一志願優先)
+                <button type="button" onclick="window.runMatching()" class="bg-green-600 text-white px-8 py-3 rounded-full text-lg font-bold shadow-lg hover:bg-green-500 transition transform hover:scale-105 active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-calculator mr-2"></i> 執行分發 (依志願順序優先)
                 </button>
             </div>
 
-            <!-- 分發清單區塊 (新增詳細資料) -->
+            <!-- 分發清單區塊 -->
             <div id="matching-results-container" class="hidden card p-0 overflow-hidden mb-8">
                 <div class="p-4 bg-gray-50 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <h3 class="font-bold text-gray-800"><i class="fa-solid fa-list-check mr-2 text-green-600"></i>分發詳細清單 (依分數排序)</h3>
+                    <h3 class="font-bold text-gray-800"><i class="fa-solid fa-list-check mr-2 text-green-600"></i>分發詳細清單 (依錄取順位與分數)</h3>
                     
                     <div class="flex items-center gap-3 w-full sm:w-auto">
-                        <!-- 搜尋框 -->
                         <div class="relative w-full sm:w-64">
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                 <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                             </div>
-                            <input type="text" id="searchInput" onkeyup="filterMatchingResults()" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2" placeholder="搜尋姓名或標籤...">
+                            <input type="text" id="searchInput" onkeyup="window.filterMatchingResults()" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2" placeholder="搜尋姓名或標籤...">
                         </div>
 
-                        <button onclick="exportMatchingResults()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 transition whitespace-nowrap shadow">
-                            <i class="fa-solid fa-file-export mr-1"></i> 匯出總表
+                        <!-- 進入 Kanban 模式的按鈕 -->
+                        <button onclick="window.openKanbanModal()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-500 transition whitespace-nowrap shadow font-bold flex items-center">
+                            <i class="fa-solid fa-trello mr-2"></i> 看板手動調整
+                        </button>
+
+                        <button onclick="window.exportMatchingResultsExcel()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 transition whitespace-nowrap shadow flex items-center">
+                            <i class="fa-solid fa-file-excel mr-1"></i> 匯出分發結果
                         </button>
                     </div>
                 </div>
@@ -240,9 +260,9 @@
                                 <th class="px-4 py-3 bg-gray-50">#</th>
                                 <th class="px-4 py-3 bg-gray-50">姓名</th>
                                 <th class="px-4 py-3 bg-gray-50">身份/總分</th>
-                                <th class="px-4 py-3 bg-gray-50 w-1/4">第一志願</th>
+                                <th class="px-4 py-3 bg-gray-50 w-1/4">多日營志願排序</th>
                                 <th class="px-4 py-3 bg-gray-50 w-1/4">錄取梯次</th>
-                                <th class="px-4 py-3 bg-gray-50 w-1/4 text-gray-500">落選/候補</th>
+                                <th class="px-4 py-3 bg-gray-50 w-1/4 text-gray-500">未錄取原因</th>
                             </tr>
                         </thead>
                         <tbody id="table-matching-list" class="bg-white divide-y divide-gray-200">
@@ -279,13 +299,13 @@
         </div>
     </div>
 
-    <!-- 志工詳細資料 Modal -->
-    <div id="volunteer-modal" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="absolute inset-0 bg-black bg-opacity-50" onclick="closeVolunteerModal()"></div>
+    <!-- 志工詳細資料 Modal (原版) -->
+    <div id="volunteer-modal" class="fixed inset-0 z-[60] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black bg-opacity-50" onclick="window.closeVolunteerModal()"></div>
         <div class="bg-white w-full max-w-lg mx-4 rounded-lg shadow-2xl z-10 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
             <div class="bg-asus-blue text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
                 <h3 class="text-xl font-bold" id="modal-name">志工姓名</h3>
-                <button onclick="closeVolunteerModal()" class="text-white hover:text-gray-200 focus:outline-none"><i class="fa-solid fa-times text-xl"></i></button>
+                <button onclick="window.closeVolunteerModal()" class="text-white hover:text-gray-200 focus:outline-none"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
             <div class="p-6 overflow-y-auto">
                 <div class="mb-4"><span id="modal-tags" class="text-sm font-bold text-indigo-600 bg-indigo-100 px-2 py-1 rounded"></span></div>
@@ -293,7 +313,7 @@
                     <div><p class="text-gray-500 mb-1">Email</p><p id="modal-email" class="font-bold text-gray-800 break-all">-</p></div>
                     <div><p class="text-gray-500 mb-1">經驗年資</p><p id="modal-exp" class="font-bold text-gray-800">-</p></div>
                     <div class="col-span-2"><p class="text-gray-500 mb-1">專長或興趣</p><p id="modal-skills" class="font-bold text-gray-800">-</p></div>
-                    <div class="col-span-2"><p class="text-gray-500 mb-1">第一志願</p><p id="modal-first-choice" class="font-bold text-blue-700">-</p></div>
+                    <div class="col-span-2"><p class="text-gray-500 mb-1">多日營志願排序</p><p id="modal-first-choice" class="font-bold text-blue-700">-</p></div>
                 </div>
                 <div class="border-t border-gray-200 pt-4">
                     <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center"><i class="fa-solid fa-clipboard-list mr-2"></i> 所有報名梯次</h4>
@@ -301,52 +321,147 @@
                 </div>
             </div>
             <div class="bg-gray-50 px-6 py-3 rounded-b-lg flex justify-end">
-                <button onclick="closeVolunteerModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">關閉</button>
+                <button onclick="window.closeVolunteerModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">關閉</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 全新 Trello 風格 Kanban Modal -->
+    <div id="kanban-modal" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black bg-opacity-60" onclick="window.closeKanbanModal()"></div>
+        <div class="bg-gray-100 w-[98vw] h-[96vh] rounded-xl shadow-2xl z-10 flex flex-col overflow-hidden transform scale-95 transition-transform duration-300">
+            
+            <!-- Header -->
+            <div class="bg-blue-800 text-white px-6 py-3 flex justify-between items-center shadow-md z-20">
+                <div>
+                    <h3 class="text-xl font-bold flex items-center"><i class="fa-solid fa-trello mr-3"></i>分發看板 (手動調整)</h3>
+                    <p class="text-xs text-blue-200 mt-1">拖曳志工卡片至右方營隊，或點擊名單中的「編輯」圖示來快速勾選梯次。</p>
+                </div>
+                <button onclick="window.closeKanbanModal()" class="text-white bg-blue-700 hover:bg-red-500 px-4 py-2 rounded transition-colors font-bold flex items-center shadow">
+                    <i class="fa-solid fa-check mr-2"></i> 完成並關閉
+                </button>
+            </div>
+
+            <!-- Board Area -->
+            <div class="flex flex-1 overflow-hidden">
+                
+                <!-- 志工總池 (固定在左側) -->
+                <div class="flex-shrink-0 w-80 bg-gray-100 flex flex-col h-full border-r border-gray-300 shadow-sm z-10"
+                     ondragover="window.kanbanAllowDrop(event)" 
+                     ondrop="window.kanbanDrop(event, 'pool')"
+                     ondragenter="this.classList.add('kanban-drop-active')"
+                     ondragleave="this.classList.remove('kanban-drop-active')">
+                    
+                    <div class="p-3 border-b border-gray-200 bg-gray-200/70">
+                        <h4 class="font-bold text-gray-700 mb-2 flex justify-between items-center">
+                            <span><i class="fa-solid fa-users mr-2"></i>志工總池 (人員名單)</span>
+                            <span id="kanban-pool-count" class="bg-white px-2 py-0.5 rounded text-xs shadow-sm">0 人</span>
+                        </h4>
+                        <!-- 固定獨立的搜尋框，避免失去焦點 -->
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none"><i class="fa-solid fa-search text-gray-400 text-xs"></i></div>
+                            <input type="text" id="kanban-search-input" onkeyup="window.renderKanbanPool()" class="w-full text-xs rounded border border-gray-300 pl-7 py-1.5 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="搜尋姓名或標籤...">
+                        </div>
+                    </div>
+                    
+                    <!-- 動態生成的卡片列表 -->
+                    <div class="flex-1 overflow-y-auto p-2 kanban-col-scroll transition-colors" id="kanban-pool-list">
+                        <!-- JS 動態生成志工池卡片 -->
+                    </div>
+                </div>
+
+                <!-- 右側各梯次看板區 -->
+                <div class="flex-1 overflow-x-auto overflow-y-hidden p-4 gap-4 flex items-start kanban-board-scroll" id="kanban-camps-container">
+                    <!-- JS 動態生成 Camp Columns -->
+                </div>
+                
+            </div>
+            
         </div>
     </div>
 
     <!-- JavaScript 邏輯核心 -->
     <script>
         let globalVolunteers = [];
+        let originalHeaders = []; 
         let CONFIG = { CAMPS: [] };
         let CAMP_DAYS = {};
         
         let globalWeights = {
-            "2.一日營加分(每場)": 20,
-            "4.畢業生/和碩生": 20,      
-            "5.課程開發組": 20,         
-            "早鳥(前33%)": 30,
-            "中鳥(中33%)": 15,
-            "晚鳥(後34%)": 0
+            "參與一日營加分(單次)": 5, 
+            "5.課程開發組": 5,         
+            "早鳥(前33%)": 3,
+            "中鳥(中33%)": 2,
+            "晚鳥(後34%)": 1
         };
 
         let globalCapacities = {};
         let volunteerAssignmentsMap = {};
         let lastMatchingDataForSearch = []; 
+        let isImportedResult = false; 
+
+        const CAMP_CODE_MAPPING = {
+            '1': '南投都達',
+            '2': '新北和平',
+            '3': '嘉義南靖',
+            '4': '彰化同安',
+            '5': '新北龜山',
+            '6': '台北大橋'
+        };
+
+        // 追蹤名單中被展開「編輯」的志工
+        let expandedDndVolunteer = null;
+
+        function isChecked(val) {
+            if (val === undefined || val === null) return false;
+            const s = String(val).trim().toLowerCase();
+            return s === "是" || s === "true" || s === "v" || s === "o" || s === "1" || s === "ok" || s === "yes" || s === "y";
+        }
 
         function detectColumns(headers) {
+            originalHeaders = headers; 
+            isImportedResult = headers.includes("AI幫你選 (錄取結果)");
+
             CONFIG.TIMESTAMP = headers.find(h => h.includes("完成時間") || h.includes("提交時間") || h.includes("Timestamp")) || headers[2];
-            CONFIG.NAME = headers.find(h => h.includes("姓名") && !h.includes("緊急")) || headers[6];
-            CONFIG.EMAIL = headers.find(h => h.includes("電子郵件")) || headers[3];
+            CONFIG.NAME = headers.find(h => h.includes("姓名") && !h.includes("緊急") && !h.includes("聯絡人")) || headers[6];
+            CONFIG.EMAIL = headers.find(h => h.includes("電子郵件") && h.includes("公司")) || headers.find(h => h.includes("電子郵件")) || headers[3];
             CONFIG.EXPERIENCE = headers.find(h => h.includes("曾參加過")) || headers[13];
             CONFIG.SKILLS = headers.find(h => h.includes("專長或興趣")) || headers[14];
-            CONFIG.FIRST_CHOICE = headers.find(h => h.includes("第一志願") || h.includes("最希望") || h.includes("優先"));
+            CONFIG.FIRST_CHOICE = headers.find(h => h.includes("優先順序") || h.includes("第一志願"));
             CONFIG.COURSE_DEV = headers.find(h => h.includes("課程開發") || h.includes("我有參予"));
             
             CONFIG.CAMPS = headers.filter(h => h.includes("是否參加") && h.includes("樂學營") && !h.includes("曾參加過"));
             
             CONFIG.CAMPS.forEach(camp => {
-                if (camp.includes("一日")) CAMP_DAYS[camp] = 1;
+                if (camp.includes("一日") || camp.includes("1日")) CAMP_DAYS[camp] = 1;
                 else if (camp.includes("二日") || camp.includes("兩日") || camp.includes("2日") || camp.includes("龜山") || camp.includes("大橋")) CAMP_DAYS[camp] = 2;
                 else if (camp.includes("三日") || camp.includes("3日")) CAMP_DAYS[camp] = 3;
                 else if (camp.includes("四日") || camp.includes("4日")) CAMP_DAYS[camp] = 4;
                 else CAMP_DAYS[camp] = 1;
 
+                if (camp.includes("三日") || camp.includes("3日")) {
+                    CAMP_DAYS[camp] = 3;
+                }
+
                 if (!globalCapacities[camp]) {
                     globalCapacities[camp] = 25;
                 }
             });
+        }
+
+        function parsePreferenceString(rawStr) {
+            if (!rawStr) return "未填寫";
+            let digits = String(rawStr).replace(/\D/g, ''); 
+            if (!digits) return "未填寫(或格式錯誤)";
+            
+            let result = [];
+            for (let i = 0; i < digits.length; i++) {
+                let code = digits[i];
+                if (CAMP_CODE_MAPPING[code]) {
+                    result.push(`${i+1}.${CAMP_CODE_MAPPING[code]}`);
+                }
+            }
+            return result.length > 0 ? result.join(" > ") : "未填寫(或格式錯誤)";
         }
 
         function shortCampName(longName) {
@@ -365,31 +480,39 @@
 
             let schoolStr = longName;
             schoolStr = schoolStr.replace(/是否參加|202\d\/\d{1,2}\/\d{1,2}[\s~]*(\d{1,2}\/\d{1,2})?|（.*?）|\(.*?\)/g, "");
-            schoolStr = schoolStr.replace(/一日樂學營|二日樂學營|三日樂學營|四日樂學營|樂學營|一日營|營隊|國小/g, "");
+            schoolStr = schoolStr.replace(/[\s\xa0]+/g, ""); 
+            schoolStr = schoolStr.replace(/[一二三四1234]日樂學營|樂學營|一日營|營隊|國小/g, "");
             
-            return `${dateStr}${schoolStr.trim()}`;
+            return {
+                display: `${dateStr}${schoolStr.trim()}`,
+                pureName: schoolStr.trim()
+            };
         }
+
+        function shortCampNameStr(longName) { return shortCampName(longName).display; }
+        function shortCampNamePure(longName) { return shortCampName(longName).pureName; }
 
         function handleMainFile(files) {
             if (files.length === 0) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {defval: ""});
+                    let data = new Uint8Array(e.target.result);
+                    let workbook = XLSX.read(data, {type: 'array'});
+                    let firstSheetName = workbook.SheetNames[0];
+                    let jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {defval: ""});
                     
                     if (jsonData.length === 0) throw new Error("檔案為空");
 
-                    const normalizedData = jsonData.map(row => {
-                        const newRow = {};
+                    let normalizedData = jsonData.map(row => {
+                        let newRow = {};
                         Object.keys(row).forEach(key => newRow[key.trim()] = row[key]);
                         return newRow;
                     });
 
                     detectColumns(Object.keys(normalizedData[0]));
                     globalVolunteers = normalizedData.filter(row => {
-                        const name = row[CONFIG.NAME];
+                        let name = row[CONFIG.NAME];
                         return name && String(name).trim() !== "" && !String(name).includes("ex:王大明");
                     });
 
@@ -398,6 +521,7 @@
                     
                     document.getElementById('upload-prompt').classList.add('hidden');
                     document.getElementById('view-dashboard').classList.remove('hidden');
+
                 } catch (err) {
                     alert("讀取檔案失敗：" + err.message);
                 }
@@ -405,24 +529,147 @@
             reader.readAsArrayBuffer(files[0]);
         }
 
+        function handleImportResult(files) {
+            if (files.length === 0) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = new Uint8Array(e.target.result);
+                    let workbook = XLSX.read(data, {type: 'array'});
+                    let firstSheetName = workbook.SheetNames[0];
+                    let jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {defval: ""});
+                    
+                    if (jsonData.length === 0) throw new Error("檔案為空");
+
+                    let normalizedData = jsonData.map(row => {
+                        let newRow = {};
+                        Object.keys(row).forEach(key => newRow[key.trim()] = row[key]);
+                        return newRow;
+                    });
+
+                    detectColumns(Object.keys(normalizedData[0]));
+                    globalVolunteers = normalizedData.filter(row => {
+                        let name = row[CONFIG.NAME];
+                        return name && String(name).trim() !== "" && !String(name).includes("ex:王大明");
+                    });
+
+                    updateDashboard(globalVolunteers);
+                    renderSettings();
+                    
+                    document.getElementById('upload-prompt').classList.add('hidden');
+
+                    if (isImportedResult) {
+                        restoreAssignmentsFromData(globalVolunteers);
+                        alert("偵測到此為已分發的檔案，已成功還原先前的分發結果！您可以點擊「手動調整」繼續編輯。");
+                        document.getElementById('matching-results-container').classList.remove('hidden');
+                        document.getElementById('allocation-results-container').classList.remove('hidden');
+                        switchTab('matching');
+                    } else {
+                        alert("這似乎不是包含分發結果的檔案。請匯入之前匯出的「分配總表」。");
+                    }
+
+                } catch (err) {
+                    alert("讀取檔案失敗：" + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(files[0]);
+        }
+
+        function restoreAssignmentsFromData(volunteers) {
+            volunteerAssignmentsMap = {};
+            
+            volunteers.forEach(p => {
+                const pName = p[CONFIG.NAME];
+                let tags = ["匯入資料"];
+                let exp = String(p[CONFIG.EXPERIENCE] || "").trim();
+                let email = String(p[CONFIG.EMAIL] || "").toLowerCase();
+                let isEmployee = email.includes("asus") || (!email.includes("gmail") && !email.includes("yahoo") && !email.includes("hotmail") && email !== ""); 
+                if (email.includes("pegatron")) isEmployee = false;
+
+                let isVeteran = false;
+                let userCategory = "newbie";
+                if (exp.includes("未曾參加") || exp === "無" || exp.includes("未填寫")) {
+                    tags.push("第一次參加(新手)"); 
+                    userCategory = "newbie";
+                } else if (exp.includes("1~2年") || exp.includes("1年")) { 
+                    tags.push("參加1年(老手)"); 
+                    isVeteran = true;
+                    userCategory = isEmployee ? "asus-vet" : "non-asus-vet";
+                } else if (exp.includes("2年") || exp.includes("3年") || exp.includes("多次") || exp.includes("以上")) { 
+                    tags.push("參加2年以上(老手)"); 
+                    isVeteran = true;
+                    userCategory = isEmployee ? "asus-vet" : "non-asus-vet";
+                } else {
+                    tags.push("第一次參加(新手)");
+                    userCategory = "newbie";
+                }
+
+                volunteerAssignmentsMap[pName] = { 
+                    raw: p, 
+                    assignedCamps: [], 
+                    rejectedCampsDetails: [], 
+                    multiDayCount: 0, 
+                    tags: tags, 
+                    isVeteran: isVeteran, 
+                    userCategory: userCategory,
+                    totalScore: p["系統結算總分"] || 0 
+                };
+
+                let assignedStr = String(p["AI幫你選 (錄取結果)"] || "");
+                if (assignedStr && !assignedStr.includes("未錄取")) {
+                    let assignedDisplayNames = assignedStr.split(";").map(s => s.trim());
+                    assignedDisplayNames.forEach(displayName => {
+                        let originalCampName = CONFIG.CAMPS.find(c => shortCampNameStr(c) === displayName);
+                        if (originalCampName) {
+                            volunteerAssignmentsMap[pName].assignedCamps.push(originalCampName);
+                            if (CAMP_DAYS[originalCampName] > 1) {
+                                volunteerAssignmentsMap[pName].multiDayCount++;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            updateFullListDisplayAndRender();
+        }
+
         function updateDashboard(volunteers) {
-            let totalSlots = 0, newbie = 0, veteran = 0, firstChoiceFilled = 0;
-            let campCounts = {}, expCounts = {};
+            let totalSlots = 0, firstChoiceFilled = 0;
+            let campCounts = {};
+            let expStats = { "未參加過": 0, "參加1年": 0, "參加2年以上": 0 };
+            let nameCounts = {};
+            let duplicateNames = new Set();
+            
             CONFIG.CAMPS.forEach(c => campCounts[c] = 0);
 
             volunteers.forEach(p => {
+                let name = p[CONFIG.NAME];
+                nameCounts[name] = (nameCounts[name] || 0) + 1;
+                if (nameCounts[name] > 1) duplicateNames.add(name);
+
                 CONFIG.CAMPS.forEach(c => {
-                    const val = String(p[c]).trim();
-                    if (val === "是" || val.toLowerCase() === "true" || val === "v") {
+                    if (isChecked(p[c])) {
                         campCounts[c]++;
                         totalSlots++;
                     }
                 });
-                if (CONFIG.FIRST_CHOICE && p[CONFIG.FIRST_CHOICE] && String(p[CONFIG.FIRST_CHOICE]).trim() !== "") firstChoiceFilled++;
+
+                let rawChoice = String(p[CONFIG.FIRST_CHOICE] || "").trim();
+                let digits = rawChoice.replace(/\D/g, '');
+                if (digits.length > 0) firstChoiceFilled++;
+                
                 let exp = String(p[CONFIG.EXPERIENCE] || "未填寫").trim();
-                expCounts[exp] = (expCounts[exp] || 0) + 1;
-                if (exp.includes("未曾參加") || exp.includes("無") || exp.includes("1~2年") || exp === "1年" || exp.includes("未填寫")) newbie++;
-                else veteran++;
+                if (exp.includes("未曾參加") || exp === "無" || exp.includes("未填寫")) {
+                    expStats["未參加過"]++;
+                } else if (exp.includes("1~2年") || exp.includes("1年")) {
+                    expStats["參加1年"]++;
+                } else {
+                    expStats["參加2年以上"]++;
+                }
+            });
+
+            volunteers.forEach(p => {
+                p._isDuplicate = duplicateNames.has(p[CONFIG.NAME]);
             });
 
             document.getElementById('kpi-people').innerText = volunteers.length;
@@ -430,15 +677,14 @@
             document.getElementById('kpi-avg').innerText = volunteers.length ? (totalSlots/volunteers.length).toFixed(1) : 0;
             document.getElementById('kpi-first').innerText = volunteers.length ? Math.round((firstChoiceFilled/volunteers.length)*100) + "%" : "0%";
 
-            renderCharts(campCounts, expCounts);
+            renderCharts(campCounts, expStats);
             renderVolunteerList(volunteers);
         }
 
-        // 新增：儀表板清單搜尋功能
         function filterVolunteerList() {
-            const input = document.getElementById('searchVolunteerInput').value.toLowerCase();
-            const filtered = globalVolunteers.filter(p => {
-                const name = String(p[CONFIG.NAME] || "").toLowerCase();
+            let input = document.getElementById('searchVolunteerInput').value.toLowerCase();
+            let filtered = globalVolunteers.filter(p => {
+                let name = String(p[CONFIG.NAME] || "").toLowerCase();
                 return name.includes(input);
             });
             renderVolunteerList(filtered);
@@ -450,12 +696,10 @@
             
             Object.entries(globalWeights).forEach(([key, val]) => {
                 if (key.includes("早鳥") || key.includes("中鳥") || key.includes("晚鳥")) return;
-                
                 wContainer.innerHTML += `
                     <div class="bg-gray-50 p-2 rounded border border-gray-200 flex flex-col">
                         <label class="text-xs text-gray-500 font-bold mb-1">${key}</label>
-                        <input type="number" value="${val}" onchange="globalWeights['${key}'] = Number(this.value)"
-                            class="w-full border border-gray-300 rounded px-2 py-1 text-blue-800 font-bold outline-none">
+                        <input type="number" value="${val}" data-key="${key}" class="weight-input w-full border border-gray-300 rounded px-2 py-1 text-blue-800 font-bold outline-none">
                     </div>
                 `;
             });
@@ -467,21 +711,20 @@
                 tContainer.innerHTML += `
                     <div class="bg-orange-50 p-2 rounded border border-orange-200 flex flex-col">
                         <label class="text-xs text-orange-800 font-bold mb-1">${key.split('(')[0]}</label>
-                        <input type="number" value="${val}" onchange="globalWeights['${key}'] = Number(this.value)"
-                            class="w-full border border-orange-300 rounded px-2 py-1 text-orange-800 font-bold outline-none">
+                        <input type="number" value="${val}" data-key="${key}" class="time-weight-input w-full border border-orange-300 rounded px-2 py-1 text-orange-800 font-bold outline-none">
                     </div>
                 `;
             });
 
             const cContainer = document.getElementById('capacities-display');
             cContainer.innerHTML = '';
-            Object.entries(globalCapacities).forEach(([camp, val]) => {
+            CONFIG.CAMPS.forEach(camp => {
+                let val = globalCapacities[camp] !== undefined ? globalCapacities[camp] : 25;
                 cContainer.innerHTML += `
                     <div class="flex items-center justify-between bg-gray-50 p-2 mb-1 rounded border border-gray-200">
-                        <span class="text-xs text-gray-700 font-medium truncate w-3/4" title="${camp}">${shortCampName(camp)}</span>
+                        <span class="text-xs text-gray-700 font-medium truncate w-3/4" title="${camp}">${shortCampNameStr(camp)}</span>
                         <div class="flex items-center w-1/4">
-                            <input type="number" value="${val}" onchange="globalCapacities['${camp}'] = Number(this.value)"
-                                class="w-full border border-gray-300 rounded px-1 py-1 text-right text-green-700 font-bold outline-none">
+                            <input type="number" value="${val}" data-camp="${camp.replace(/"/g, '&quot;')}" class="capacity-input w-full border border-gray-300 rounded px-1 py-1 text-right text-green-700 font-bold outline-none">
                         </div>
                     </div>
                 `;
@@ -504,18 +747,39 @@
             XLSX.writeFile(wb, "2026志工媒合系統設定.xlsx");
         }
 
+        // 新增：共用的個人上限取得函數
+        function getPersonalLimit(state) {
+            let limitNewbie = parseInt(document.getElementById('limit-newbie').value) || 1;
+            let limitAsusVet = parseInt(document.getElementById('limit-asus-vet').value) || 2;
+            let limitNonAsusVet = parseInt(document.getElementById('limit-non-asus-vet').value) || 1;
+
+            if (state.userCategory === "newbie") return limitNewbie;
+            if (state.userCategory === "asus-vet") return limitAsusVet;
+            if (state.userCategory === "non-asus-vet") return limitNonAsusVet;
+            return 2;
+        }
+
         function runMatching() {
             try {
                 if (globalVolunteers.length === 0) return alert("請先匯入資料！");
+
+                document.querySelectorAll('.weight-input').forEach(inp => {
+                    globalWeights[inp.dataset.key] = Number(inp.value) || 0;
+                });
+                document.querySelectorAll('.time-weight-input').forEach(inp => {
+                    globalWeights[inp.dataset.key] = Number(inp.value) || 0;
+                });
+                document.querySelectorAll('.capacity-input').forEach(inp => {
+                    globalCapacities[inp.dataset.camp] = Number(inp.value) || 0;
+                });
 
                 let vetRatioInput = document.getElementById('veteran-ratio-input').value;
                 let veteranRatio = Number(vetRatioInput) / 100;
                 if(isNaN(veteranRatio) || veteranRatio < 0) veteranRatio = 0.5;
 
-                // 取得各類別的上限
-                let limitNewbie = parseInt(document.getElementById('limit-newbie').value) || 2;
+                let limitNewbie = parseInt(document.getElementById('limit-newbie').value) || 1;
                 let limitAsusVet = parseInt(document.getElementById('limit-asus-vet').value) || 2;
-                let limitNonAsusVet = parseInt(document.getElementById('limit-non-asus-vet').value) || 2;
+                let limitNonAsusVet = parseInt(document.getElementById('limit-non-asus-vet').value) || 1;
 
                 let volunteerState = {}; 
                 let allApplications = [];
@@ -549,14 +813,21 @@
 
                 globalVolunteers.forEach(p => {
                     const pName = p[CONFIG.NAME];
-                    volunteerState[pName] = { raw: p, assignedCamps: [], rejectedCamps: [], multiDayCount: 0, tags: [], isVeteran: false };
+                    volunteerState[pName] = { 
+                        raw: p, 
+                        assignedCamps: [], 
+                        rejectedCampsDetails: [], 
+                        multiDayCount: 0, 
+                        tags: [], 
+                        isVeteran: false,
+                        totalScore: 0 
+                    };
 
                     let tags = [];
                     let personalScore = 0;
                     let email = String(p[CONFIG.EMAIL] || "").toLowerCase();
                     let skills = String(p[CONFIG.SKILLS] || "");
                     let exp = String(p[CONFIG.EXPERIENCE] || "");
-                    let firstChoiceStr = CONFIG.FIRST_CHOICE ? String(p[CONFIG.FIRST_CHOICE] || "") : "";
                     
                     let isCourseDev = false;
                     if (skills.includes("課程組")) isCourseDev = true;
@@ -567,41 +838,30 @@
                         personalScore += globalWeights["5.課程開發組"]; 
                     }
 
-                    // 判斷身分類別與年資
                     let isVeteran = false;
-                    let userCategory = "newbie"; // newbie, asus-vet, non-asus-vet
+                    let userCategory = "newbie"; 
 
-                    let isEmployee = email.includes("asus") || !email.includes("gmail") && !email.includes("yahoo") && !email.includes("hotmail"); // 簡易判斷，非免費信箱視為員工 (或依分機號碼)
-                    if (email.includes("pegatron")) isEmployee = false; // 和碩算非華碩員工? 這裡暫且歸類為 non-asus
+                    let isEmployee = email.includes("asus") || (!email.includes("gmail") && !email.includes("yahoo") && !email.includes("hotmail") && email !== ""); 
+                    if (email.includes("pegatron")) isEmployee = false; 
 
-                    if (exp.includes("未曾參加") || exp.includes("無") || exp.includes("未填寫")) {
-                        tags.push("年資:新手"); 
+                    if (exp.includes("未曾參加") || exp === "無" || exp.includes("未填寫")) {
+                        tags.push("第一次參加(新手)"); 
                         userCategory = "newbie";
-                    } else if (exp.includes("1~2年") || exp === "1年") { 
-                        tags.push("年資:1-2年(新手)"); 
-                        isVeteran = false; // 邏輯維持：1-2年算新手，不佔老手名額
-                        userCategory = "newbie";
-                    } else if (exp.includes("2年") || exp.includes("3年") || exp.includes("多次") || exp.includes("以上")) { 
-                        tags.push("年資:2年以上(老手)"); 
+                    } else if (exp.includes("1~2年") || exp.includes("1年")) { 
+                        tags.push("參加1年(老手)"); 
                         isVeteran = true;
-                        
-                        // 判斷老手類別
-                        if (isEmployee) {
-                            userCategory = "asus-vet";
-                        } else {
-                            userCategory = "non-asus-vet";
-                        }
+                        if (isEmployee) { userCategory = "asus-vet"; } else { userCategory = "non-asus-vet"; }
+                    } else if (exp.includes("2年") || exp.includes("3年") || exp.includes("多次") || exp.includes("以上")) { 
+                        tags.push("參加2年以上(老手)"); 
+                        isVeteran = true;
+                        if (isEmployee) { userCategory = "asus-vet"; } else { userCategory = "non-asus-vet"; }
                     } else {
-                        tags.push("年資:新手");
+                        tags.push("第一次參加(新手)");
                         userCategory = "newbie";
                     }
                     
                     volunteerState[pName].isVeteran = isVeteran;
-                    volunteerState[pName].userCategory = userCategory; // 儲存類別以供上限判斷
-
-                    if (email.includes("pegatron") || String(pName).includes("畢業生") || String(pName).includes("和碩")) {
-                        tags.push("身分:畢業生/和碩"); personalScore += globalWeights["4.畢業生/和碩生"];
-                    }
+                    volunteerState[pName].userCategory = userCategory; 
 
                     let tData = earlyBirdScores[pName] || { score: 0, type: "無" };
                     if (tData.type) {
@@ -609,41 +869,38 @@
                         personalScore += tData.score; 
                     }
 
-                    let oneDayCount = 0;
+                    let hasOneDay = false;
                     CONFIG.CAMPS.forEach(c => {
-                        const val = String(p[c]).trim();
-                        if (CAMP_DAYS[c] === 1 && (val === "是" || val === "v")) oneDayCount++;
+                        if (isChecked(p[c]) && CAMP_DAYS[c] === 1) hasOneDay = true;
                     });
-                    if (oneDayCount > 0) tags.push(`參與${oneDayCount}場一日營`);
-                    const oneDayBonus = oneDayCount * globalWeights["2.一日營加分(每場)"];
-
+                    if (hasOneDay) tags.push(`參與一日營`);
+                    const oneDayBonus = hasOneDay ? (globalWeights["參與一日營加分(單次)"] || 0) : 0;
+                    
+                    personalScore += oneDayBonus;
+                    volunteerState[pName].totalScore = personalScore; 
                     volunteerState[pName].tags = tags;
+                    
+                    let rawChoice = String(p[CONFIG.FIRST_CHOICE] || "").trim();
+                    let digitsOnly = rawChoice.replace(/\D/g, ''); 
 
                     CONFIG.CAMPS.forEach(campName => {
-                        const val = String(p[campName]).trim();
-                        if (val === "是" || val.toLowerCase() === "true" || val === "v") {
-                            
+                        if (isChecked(p[campName])) {
                             const days = CAMP_DAYS[campName];
                             const isMulti = days > 1;
-                            const shortName = shortCampName(campName);
+                            let choiceRank = 0; 
+                            if (isMulti && digitsOnly.length > 0) {
+                                let campCode = Object.keys(CAMP_CODE_MAPPING).find(key => campName.includes(CAMP_CODE_MAPPING[key]));
+                                if (campCode) {
+                                    let idx = digitsOnly.indexOf(campCode);
+                                    if (idx !== -1) { choiceRank = idx + 1; }
+                                }
+                            }
                             
-                            let datePart = shortName.split(/[\u4e00-\u9fa5]/)[0];
-                            let isFirstChoice = firstChoiceStr !== "" && (firstChoiceStr.includes(shortName) || (datePart.length > 3 && firstChoiceStr.includes(datePart)));
-                            
-                            let rankScore = 0; 
-                            let finalOneDayBonus = isMulti ? oneDayBonus : 0;
-                            let totalScore = personalScore + rankScore + finalOneDayBonus;
-
-                            let detailStr = `個人分:${personalScore}`;
-                            if (isMulti && oneDayBonus > 0) detailStr += ` + 一日營紅利:${oneDayBonus}`;
-
                             allApplications.push({
                                 name: pName,
                                 camp: campName,
-                                score: totalScore,
-                                details: detailStr,
-                                tags: tags.join(", "),
-                                isFirstChoice: isFirstChoice,
+                                score: personalScore, 
+                                choiceRank: choiceRank, 
                                 isMultiDay: isMulti,
                                 isVeteran: isVeteran
                             });
@@ -652,8 +909,9 @@
                 });
 
                 allApplications.sort((a, b) => {
-                    if (a.isFirstChoice && !b.isFirstChoice) return -1;
-                    if (!a.isFirstChoice && b.isFirstChoice) return 1;
+                    let rankA = (a.choiceRank && a.choiceRank > 0) ? a.choiceRank : 99;
+                    let rankB = (b.choiceRank && b.choiceRank > 0) ? b.choiceRank : 99;
+                    if (rankA !== rankB) return rankA - rankB; 
                     return b.score - a.score;
                 });
 
@@ -664,30 +922,25 @@
                     veteranCounts[c] = 0;
                 });
                 
-                let finalResults = []; 
-                
                 allApplications.forEach(app => {
                     const totalLimit = globalCapacities[app.camp] || 25;
                     const pState = volunteerState[app.name];
+                    let rejectReason = "";
 
-                    // 關鍵修正 1：一日營隊不檢查個人上限，只有多日營隊才檢查
+                    // AI 分發時依然保持嚴格限制，不允許超額
                     if (app.isMultiDay) {
-                        let personalLimit = 2; // 預設
-                        if (pState.userCategory === "newbie") personalLimit = limitNewbie;
-                        else if (pState.userCategory === "asus-vet") personalLimit = limitAsusVet;
-                        else if (pState.userCategory === "non-asus-vet") personalLimit = limitNonAsusVet;
+                        let personalLimit = window.getPersonalLimit(pState);
 
                         if (pState.multiDayCount >= personalLimit) {
-                            pState.rejectedCamps.push(app.camp); 
+                            rejectReason = "超過個人錄取次數上限";
+                            pState.rejectedCampsDetails.push({camp: app.camp, reason: rejectReason}); 
                             return; 
                         }
                     }
 
-                    // 梯次滿額判斷
                     let canAdmit = false;
                     const currentTotal = currentCounts[app.camp];
                     const currentVet = veteranCounts[app.camp];
-                    
                     const vetQuota = Math.floor(totalLimit * veteranRatio); 
                     const generalQuota = totalLimit - vetQuota; 
                     const currentGeneral = currentTotal - currentVet;
@@ -696,19 +949,23 @@
                         if (app.isVeteran) {
                             if (currentVet < vetQuota) canAdmit = true;
                             else if (currentGeneral < generalQuota) canAdmit = true;
+                            else rejectReason = "老手與一般名額皆滿";
                         } else {
                             if (currentGeneral < generalQuota) canAdmit = true;
+                            else rejectReason = "一般名額已滿";
                         }
+                    } else {
+                        rejectReason = "該梯次名額已滿";
                     }
 
-                    // 關鍵修正 2：如果是一日營隊，且總人數未滿，強制錄取 (不佔老手保障名額，視為一般錄取)
-                    // 為了避免一日營隊被老手比例卡住，這裡放寬條件
                     if (!app.isMultiDay && currentTotal < totalLimit) {
-                        canAdmit = true;
+                        canAdmit = true; 
+                    } else if (!app.isMultiDay && currentTotal >= totalLimit) {
+                        rejectReason = "該梯次名額已滿";
                     }
 
                     if (!canAdmit) {
-                        pState.rejectedCamps.push(app.camp); 
+                        pState.rejectedCampsDetails.push({camp: app.camp, reason: rejectReason}); 
                         return;
                     }
 
@@ -717,73 +974,90 @@
                     
                     pState.assignedCamps.push(app.camp);
                     if (app.isMultiDay) pState.multiDayCount++;
-
-                    finalResults.push({
-                        name: app.name, tags: app.tags || "一般", bestCamp: app.camp, 
-                        totalScore: app.score, details: app.details, 
-                        status: "成功", isFirstChoice: app.isFirstChoice,
-                        isVeteran: app.isVeteran
-                    });
                 });
-
-                Object.keys(volunteerState).forEach(vName => {
-                    const state = volunteerState[vName];
-                    if (state.assignedCamps.length === 0) {
-                        // 找出所有被拒絕的申請中分數最高的一個，作為代表顯示在落選區
-                    }
-                });
-
-                // 重新整理 fullListDisplay 用於顯示
-                let fullListDisplay = [];
-                Object.keys(volunteerState).forEach(vName => {
-                    const state = volunteerState[vName];
-                    const raw = state.raw;
-                    
-                    let app = allApplications.find(a => a.name === vName);
-                    let scoreDisplay = app ? app.score : 0;
-                    
-                    // 3. 抓取志工的所有勾選報名梯次
-                    let appliedCamps = [];
-                    CONFIG.CAMPS.forEach(c => {
-                        const val = String(raw[c]).trim();
-                        if (val === "是" || val.toLowerCase() === "true" || val === "v") {
-                            appliedCamps.push(shortCampName(c));
-                        }
-                    });
-
-                    fullListDisplay.push({
-                        name: vName,
-                        tags: state.tags.join(", "),
-                        firstChoice: raw[CONFIG.FIRST_CHOICE] || "無",
-                        assigned: state.assignedCamps,
-                        rejected: state.rejectedCamps,
-                        totalScore: scoreDisplay,
-                        isVeteran: state.isVeteran,
-                        details: app ? app.details : "無申請",
-                        // 新增欄位：所有報名梯次
-                        allApplied: appliedCamps
-                    });
-                });
-
-                fullListDisplay.sort((a, b) => b.totalScore - a.totalScore);
 
                 volunteerAssignmentsMap = volunteerState;
-                lastMatchingDataForSearch = fullListDisplay; 
-
-                renderMatchingResults(fullListDisplay);
-                renderAllocationOverview(finalResults, currentCounts); 
+                updateFullListDisplayAndRender();
+                switchTab('matching');
+                alert("智慧分發完成！請向下捲動查看分發清單與分配總覽。");
+                
             } catch (err) {
                 alert("執行分發時發生錯誤：" + err.message);
                 console.error(err);
             }
         }
 
-        // 修改點: 修復分發結果搜尋邏輯
+        function updateFullListDisplayAndRender() {
+            let fullListDisplay = [];
+            let currentCounts = {};
+            CONFIG.CAMPS.forEach(c => currentCounts[c] = 0);
+
+            Object.keys(volunteerAssignmentsMap).forEach(vName => {
+                const state = volunteerAssignmentsMap[vName];
+                const raw = state.raw;
+                
+                state.assignedCamps.forEach(c => {
+                    currentCounts[c] = (currentCounts[c] || 0) + 1;
+                });
+                
+                let appliedCamps = [];
+                CONFIG.CAMPS.forEach(c => {
+                    if (isChecked(raw[c])) appliedCamps.push(shortCampNameStr(c));
+                });
+
+                let limit = window.getPersonalLimit(state);
+                let isOverLimit = state.multiDayCount > limit;
+
+                fullListDisplay.push({
+                    name: vName,
+                    tags: state.tags.join(", "),
+                    firstChoice: parsePreferenceString(raw[CONFIG.FIRST_CHOICE]),
+                    assigned: state.assignedCamps,
+                    rejectedDetails: state.rejectedCampsDetails,
+                    totalScore: state.totalScore,
+                    isVeteran: state.isVeteran,
+                    details: "AI分發完成",
+                    allApplied: appliedCamps,
+                    isOverLimit: isOverLimit,
+                    overLimitText: isOverLimit ? `超額安插 (${state.multiDayCount}/${limit})` : ""
+                });
+            });
+
+            fullListDisplay.sort((a, b) => b.totalScore - a.totalScore);
+            lastMatchingDataForSearch = fullListDisplay; 
+            renderMatchingResults(fullListDisplay);
+            
+            let mockResults = [];
+            Object.keys(volunteerAssignmentsMap).forEach(vName => {
+                const state = volunteerAssignmentsMap[vName];
+                state.assignedCamps.forEach(camp => {
+                    let digitsOnly = String(state.raw[CONFIG.FIRST_CHOICE] || "").replace(/\D/g, ''); 
+                    let choiceRank = 0;
+                    if (CAMP_DAYS[camp] > 1 && digitsOnly.length > 0) {
+                        let campCode = Object.keys(CAMP_CODE_MAPPING).find(key => camp.includes(CAMP_CODE_MAPPING[key]));
+                        if (campCode) {
+                            let idx = digitsOnly.indexOf(campCode);
+                            if (idx !== -1) choiceRank = idx + 1;
+                        }
+                    }
+
+                    mockResults.push({
+                        name: vName,
+                        bestCamp: camp,
+                        isVeteran: state.isVeteran,
+                        totalScore: state.totalScore, 
+                        choiceRank: choiceRank
+                    });
+                });
+            });
+            renderAllocationOverview(mockResults, currentCounts); 
+        }
+
         function filterMatchingResults() {
             const input = document.getElementById('searchInput').value.toLowerCase();
             const filteredData = lastMatchingDataForSearch.filter(item => {
-                const name = (item.name || "").toLowerCase();
-                const tags = (item.tags || "").toLowerCase();
+                let name = (item.name || "").toLowerCase();
+                let tags = (item.tags || "").toLowerCase();
                 return name.includes(input) || tags.includes(input);
             });
             renderMatchingResults(filteredData, true); 
@@ -791,40 +1065,41 @@
 
         function renderMatchingResults(data, isFiltering = false) {
             const tbody = document.getElementById('table-matching-list');
-            tbody.innerHTML = '';
-            
             if(data.length === 0 && isFiltering) {
                 tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">找不到符合條件的結果</td></tr>`;
                 return;
             }
 
-            data.forEach((item, index) => {
-                let firstChoiceShort = item.firstChoice;
-                if (firstChoiceShort.length > 20) firstChoiceShort = shortCampName(firstChoiceShort);
-                if (firstChoiceShort === "無") firstChoiceShort = `<span class="text-gray-400">未填寫</span>`;
-
+            let htmlContent = data.map((item, index) => {
                 let assignedHtml = item.assigned.length > 0 
-                    ? item.assigned.map(c => `<span class="badge-success">${shortCampName(c)}</span>`).join("<br>") 
+                    ? item.assigned.map(c => `<span class="badge-success">${shortCampNameStr(c)}</span>`).join("<br>") 
                     : `<span class="text-gray-400 text-xs">未錄取</span>`;
 
-                let rejectedHtml = item.rejected.length > 0 
-                    ? item.rejected.map(c => `<span class="badge-fail">${shortCampName(c)}</span>`).join("<br>") 
+                let rejectedHtml = item.rejectedDetails.length > 0 
+                    ? item.rejectedDetails.map(r => {
+                        let name = shortCampNameStr(r.camp);
+                        let badgeClass = r.reason.includes("上限") ? "badge-limit" : "badge-fail";
+                        return `<span class="${badgeClass}" title="${r.reason}">${name} <span class="text-[10px] opacity-75">(${r.reason})</span></span>`;
+                    }).join("<br>") 
                     : `<span class="text-gray-300 text-xs">-</span>`;
 
-                tbody.innerHTML += `
+                return `
                     <tr class="hover:bg-blue-50 transition border-b">
                         <td class="px-4 py-3 text-gray-500 font-bold">#${index + 1}</td>
                         <td class="px-4 py-3 font-bold text-gray-800 whitespace-nowrap">${item.name}</td>
                         <td class="px-4 py-3 text-xs">
                             <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded leading-relaxed inline-block mb-1">${item.tags}</span>
-                            <br><span class="text-gray-400 font-mono">${item.totalScore}分</span>
+                            ${item.isOverLimit ? `<br><span class="bg-red-100 text-red-800 px-2 py-1 rounded leading-relaxed inline-block mb-1 font-bold border border-red-300 mt-1">⚠️ ${item.overLimitText}</span>` : ''}
+                            <br><span class="text-gray-400 font-mono">系統結算總分: ${item.totalScore}</span>
                         </td>
-                        <td class="px-4 py-3 text-xs leading-relaxed text-blue-700 font-medium">${firstChoiceShort}</td>
+                        <td class="px-4 py-3 text-xs leading-relaxed text-blue-700 font-medium">${item.firstChoice}</td>
                         <td class="px-4 py-3 text-xs leading-relaxed">${assignedHtml}</td>
                         <td class="px-4 py-3 text-xs leading-relaxed text-gray-500">${rejectedHtml}</td>
                     </tr>
                 `;
-            });
+            }).join('');
+
+            tbody.innerHTML = htmlContent;
             document.getElementById('matching-results-container').classList.remove('hidden');
         }
 
@@ -832,7 +1107,6 @@
             const gridMulti = document.getElementById('allocation-grid-multi');
             const gridSingle = document.getElementById('allocation-grid-single');
             const gridRejected = document.getElementById('allocation-grid-rejected');
-            gridMulti.innerHTML = ''; gridSingle.innerHTML = ''; gridRejected.innerHTML = '';
 
             const grouping = {};
             CONFIG.CAMPS.forEach(c => grouping[c] = []);
@@ -846,40 +1120,49 @@
             let rejectedList = [];
             Object.keys(volunteerAssignmentsMap).forEach(vName => {
                 if (volunteerAssignmentsMap[vName].assignedCamps.length === 0) {
-                    let rejected = volunteerAssignmentsMap[vName].rejectedCamps.map(shortCampName).join(", ");
-                    rejectedList.push({name: vName, totalScore: 0, tags: volunteerAssignmentsMap[vName].tags.join(", "), desc: rejected || "無有效報名"});
+                    let rejectedDetails = volunteerAssignmentsMap[vName].rejectedCampsDetails;
+                    let desc = rejectedDetails.length > 0 ? rejectedDetails.map(r => `${shortCampNameStr(r.camp)}(${r.reason})`).join(", ") : "無有效報名";
+                    rejectedList.push({name: vName, totalScore: volunteerAssignmentsMap[vName].totalScore, tags: volunteerAssignmentsMap[vName].tags.join(", "), desc: desc});
                 }
             });
             
+            let multiHtml = '';
+            let singleHtml = '';
+
             Object.entries(grouping).forEach(([campName, list]) => {
                 if (campName === "落選 / 候補") return; 
 
                 const count = list.length;
                 const limit = globalCapacities[campName] || 0;
                 const isMulti = CAMP_DAYS[campName] > 1;
-                const cardId = `alloc-${campName.replace(/\W/g, '').substring(0,10)}`;
+                const cardId = `alloc-${(campName||"").replace(/\W/g, '').substring(0,10)}`;
                 const statusText = `${count} / ${limit} 人`;
                 
                 let vetCountInCard = 0;
                 const listHtml = list.map(p => {
                     if (p.isVeteran) vetCountInCard++;
+                    let rankBadge = p.choiceRank > 0 ? `<span class="text-[10px] text-yellow-600 ml-1">第${p.choiceRank}志願</span>` : '';
+                    let state = volunteerAssignmentsMap[p.name];
+                    let isOverLimit = state && state.multiDayCount > window.getPersonalLimit(state);
+                    let overLimitTag = isOverLimit ? `<i class="fa-solid fa-triangle-exclamation text-red-500 ml-1" title="超額安插"></i>` : '';
+
                     return `
-                        <div class="flex justify-between items-center py-2 border-b border-gray-100 hover:bg-gray-50 px-2 cursor-pointer" onclick="showVolunteerDetails('${p.name}')">
+                        <div class="flex justify-between items-center py-2 border-b border-gray-100 hover:bg-gray-50 px-2 cursor-pointer" onclick="window.showVolunteerDetails('${p.name}')">
                             <div class="flex items-center gap-2">
                                  <div class="w-2 h-2 rounded-full ${p.isVeteran ? 'bg-purple-500' : 'bg-blue-500'}"></div>
-                                 <span class="font-bold ${p.isVeteran ? 'text-purple-700' : 'text-gray-700'}">${p.name}</span>
+                                 <span class="font-bold ${p.isVeteran ? 'text-purple-700' : 'text-gray-700'}">${p.name}${overLimitTag}</span>
                             </div>
-                            <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">${p.totalScore}分${p.isFirstChoice?'★':''}</span>
+                            <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">${p.totalScore}分${rankBadge}</span>
                         </div>
                     `;
                 }).join('');
 
                 let subText = `<span class="text-xs text-purple-600 font-bold ml-2">含 ${vetCountInCard} 名老手</span>`;
                 const cardHtml = `
-                    <div class="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer group" onclick="toggleAllocation('${cardId}')">
+                    <div class="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer group" onclick="window.toggleAllocation('${cardId}')">
                         <div class="flex justify-between items-start mb-2">
                             <div>
-                                <h4 class="font-bold text-base text-gray-800 truncate max-w-[200px]" title="${campName}">${shortCampName(campName)}</h4>
+                                <h4 class="font-bold text-base text-gray-800 truncate max-w-[200px]" title="${campName}">${shortCampNameStr(campName)}</h4>
                                 ${subText}
                             </div>
                             <span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap mt-1">${statusText}</span>
@@ -891,23 +1174,26 @@
                     </div>
                 `;
 
-                if (isMulti) gridMulti.innerHTML += cardHtml;
-                else gridSingle.innerHTML += cardHtml;
+                if (isMulti) multiHtml += cardHtml;
+                else singleHtml += cardHtml;
             });
+
+            gridMulti.innerHTML = multiHtml;
+            gridSingle.innerHTML = singleHtml;
 
             if (rejectedList.length > 0) {
                 const rejId = "alloc-rejected";
                 const rejHtml = rejectedList.map(p => `
-                    <div class="flex justify-between items-center py-2 border-b border-red-100 hover:bg-red-50 px-2 cursor-pointer" onclick="showVolunteerDetails('${p.name}')">
+                    <div class="flex justify-between items-center py-2 border-b border-red-100 hover:bg-red-50 px-2 cursor-pointer" onclick="window.showVolunteerDetails('${p.name}')">
                         <span class="font-bold text-gray-700">${p.name}</span>
-                        <span class="text-xs text-red-400 truncate max-w-[150px]">${p.desc}</span>
+                        <span class="text-xs text-red-400 truncate max-w-[150px]" title="${p.desc}">${p.desc}</span>
                     </div>
                 `).join('');
                 
                 gridRejected.innerHTML = `
-                    <div class="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer group" onclick="toggleAllocation('${rejId}')">
+                    <div class="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer group" onclick="window.toggleAllocation('${rejId}')">
                         <div class="flex justify-between items-center mb-2">
-                            <h4 class="font-bold text-base text-red-600">未錄取名單</h4>
+                            <h4 class="font-bold text-base text-red-600">未錄取任何梯次之名單</h4>
                             <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">${rejectedList.length} 人</span>
                         </div>
                         <div class="text-xs text-gray-400 mb-2 flex items-center"><i class="fa-solid fa-chevron-down mr-1" id="icon-${rejId}"></i> 點擊查看</div>
@@ -942,18 +1228,31 @@
             document.getElementById('modal-email').innerText = raw[CONFIG.EMAIL] || "未填寫";
             document.getElementById('modal-exp').innerText = raw[CONFIG.EXPERIENCE] || "未填寫";
             document.getElementById('modal-skills').innerText = raw[CONFIG.SKILLS] || "未填寫";
-            document.getElementById('modal-first-choice').innerText = raw[CONFIG.FIRST_CHOICE] || "未填寫";
+            document.getElementById('modal-first-choice').innerText = parsePreferenceString(raw[CONFIG.FIRST_CHOICE]);
 
             const listEl = document.getElementById('modal-camps-list');
             listEl.innerHTML = '';
             let hasCamps = false;
             CONFIG.CAMPS.forEach(c => {
-                const val = String(raw[c]).trim();
-                if (val === "是" || val.toLowerCase() === "true" || val === "v") {
+                if (isChecked(raw[c])) {
                     hasCamps = true;
                     const isAssigned = state.assignedCamps.includes(c);
-                    const statusBadge = isAssigned ? `<span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded ml-2">已錄取</span>` : `<span class="bg-red-100 text-red-500 text-xs px-2 py-0.5 rounded ml-2">落選/候補</span>`;
-                    listEl.innerHTML += `<li class="flex items-start justify-between border-b border-gray-100 py-2 last:border-0"><span class="text-gray-700">${shortCampName(c)}</span>${statusBadge}</li>`;
+                    let rejectReasonObj = state.rejectedCampsDetails.find(r => r.camp === c);
+                    let badge = '';
+                    
+                    if (isAssigned) {
+                        badge = `<span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded ml-2">已錄取</span>`;
+                    } else if (rejectReasonObj) {
+                        if (rejectReasonObj.reason.includes("上限")) {
+                            badge = `<span class="badge-limit ml-2">超過上限</span>`;
+                        } else {
+                            badge = `<span class="bg-red-100 text-red-500 text-xs px-2 py-0.5 rounded ml-2">落選 (額滿)</span>`;
+                        }
+                    } else {
+                        badge = `<span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded ml-2">未錄取</span>`;
+                    }
+                    
+                    listEl.innerHTML += `<li class="flex items-start justify-between border-b border-gray-100 py-2 last:border-0"><span class="text-gray-700">${shortCampNameStr(c)}</span>${badge}</li>`;
                 }
             });
             if (!hasCamps) listEl.innerHTML = `<li class="text-gray-400 italic">無報名紀錄</li>`;
@@ -973,25 +1272,417 @@
             document.body.classList.remove('modal-active');
         }
 
-        function exportMatchingResults() {
-            if (globalVolunteers.length === 0) return;
-            const exportData = globalVolunteers.map(row => {
+        // ==========================================
+        // 全新 Trello 風格 Kanban 拖曳介面邏輯
+        // ==========================================
+
+        function openKanbanModal() {
+            if (Object.keys(volunteerAssignmentsMap).length === 0) {
+                alert("請先執行一次智慧分發或匯入分發結果，再進行看板調整！");
+                return;
+            }
+            expandedDndVolunteer = null; 
+            const searchInput = document.getElementById('kanban-search-input');
+            if (searchInput) searchInput.value = '';
+            
+            window.renderKanbanBoard();
+            
+            const modal = document.getElementById('kanban-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('div.transform').classList.remove('scale-95');
+            modal.querySelector('div.transform').classList.add('scale-100');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeKanbanModal() {
+            const modal = document.getElementById('kanban-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('div.transform').classList.add('scale-95');
+            modal.querySelector('div.transform').classList.remove('scale-100');
+            document.body.classList.remove('modal-active');
+            window.updateFullListDisplayAndRender(); // 關閉時同步更新主儀表板資料
+        }
+
+        function renderKanbanBoard() {
+            window.renderKanbanPool();
+            window.renderKanbanCamps();
+        }
+
+        // 獨立切換某位志工的編輯面板展開狀態
+        function toggleDndExpand(ev, name) {
+            ev.stopPropagation();
+            if (expandedDndVolunteer === name) {
+                expandedDndVolunteer = null; // 點擊第二次收合
+            } else {
+                expandedDndVolunteer = name; // 展開
+            }
+            window.renderKanbanPool(); // 重新渲染名單區
+        }
+
+        // 單獨渲染總池 (包含內嵌核取方塊的邏輯)
+        function renderKanbanPool() {
+            const listEl = document.getElementById('kanban-pool-list');
+            if (!listEl) return;
+
+            const searchInput = document.getElementById('kanban-search-input');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            
+            let volunteersInPool = Object.values(volunteerAssignmentsMap);
+            if (searchTerm) {
+                volunteersInPool = volunteersInPool.filter(v => v.raw[CONFIG.NAME].toLowerCase().includes(searchTerm) || v.tags.join("").toLowerCase().includes(searchTerm));
+            }
+            volunteersInPool.sort((a, b) => b.totalScore - a.totalScore);
+
+            const countEl = document.getElementById('kanban-pool-count');
+            if (countEl) countEl.innerText = `${volunteersInPool.length} 人`;
+
+            let poolCardsHtml = volunteersInPool.map(v => {
+                const name = v.raw[CONFIG.NAME];
+                const count = v.assignedCamps.length;
+                let limit = window.getPersonalLimit(v);
+                let isOverLimit = v.multiDayCount > limit;
+
+                let badge = count > 0 ? `<span class="bg-green-100 text-green-800 text-[10px] px-1.5 py-0.5 rounded ml-1">錄取${count}梯</span>` : '';
+                if (isOverLimit) {
+                    badge += `<span class="bg-red-100 text-red-800 text-[10px] px-1.5 py-0.5 rounded border border-red-300 ml-1">⚠️超額(${v.multiDayCount}/${limit})</span>`;
+                }
+                
+                const isExpanded = expandedDndVolunteer === name;
+                
+                // 編輯按鈕
+                let expandBtn = `
+                    <button onclick="window.toggleDndExpand(event, '${name}')" class="text-[11px] bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 px-2 py-1 rounded transition-colors border border-gray-200 hover:border-blue-300 flex items-center shadow-sm">
+                        <i class="fa-solid fa-list-check mr-1"></i> 編輯梯次
+                    </button>
+                `;
+
+                // 展開後的梯次核取方塊
+                let expandedHtml = '';
+                if (isExpanded) {
+                    let checkboxes = CONFIG.CAMPS.map(camp => {
+                        let isAssigned = v.assignedCamps.includes(camp);
+                        return `
+                            <label class="flex items-center space-x-2 text-xs py-1.5 px-2 rounded hover:bg-blue-50 cursor-pointer transition-colors border border-transparent hover:border-blue-100">
+                                <input type="checkbox" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5" ${isAssigned ? 'checked' : ''} onchange="window.dndToggleCamp(event, '${name}', '${camp}', this.checked)">
+                                <span class="truncate flex-1 font-medium ${isAssigned ? 'text-blue-800' : 'text-gray-600'}" title="${shortCampNameStr(camp)}">${shortCampNameStr(camp)}</span>
+                            </label>
+                        `;
+                    }).join('');
+                    
+                    expandedHtml = `
+                        <div class="mt-2 pt-2 border-t border-gray-200 cursor-default" onclick="event.stopPropagation()">
+                            <div class="text-[10px] font-bold text-gray-500 mb-1 px-1 flex justify-between">
+                                <span>打勾以安排梯次，取消則移除：</span>
+                            </div>
+                            <div class="flex flex-col gap-0.5 bg-gray-50 p-1 rounded-md border border-gray-200 shadow-inner max-h-48 overflow-y-auto">
+                                ${checkboxes}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div draggable="true" ondragstart="window.kanbanDragStart(event, '${name}', 'pool')" 
+                         class="kanban-card bg-white p-2.5 rounded shadow-sm border border-gray-200 mb-2 hover:border-blue-300 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="font-bold text-gray-800 text-sm">${name}</span>
+                                ${badge}
+                            </div>
+                            ${expandBtn}
+                        </div>
+                        <div class="text-[10px] text-gray-500 flex justify-between items-center mt-1">
+                            <span class="truncate mr-2" title="${v.tags.join(", ")}">${v.tags.join(", ")}</span>
+                            <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 whitespace-nowrap">${v.totalScore}分</span>
+                        </div>
+                        ${expandedHtml}
+                    </div>
+                `;
+            }).join('');
+
+            listEl.innerHTML = poolCardsHtml || '<div class="text-center text-gray-400 text-xs mt-4">無符合條件的志工</div>';
+        }
+
+        // 新增：處理核取方塊的勾選/取消事件
+        function dndToggleCamp(ev, name, camp, isChecked) {
+            ev.stopPropagation();
+            const state = volunteerAssignmentsMap[name];
+            if (!state) return;
+
+            const isTargetMultiDay = CAMP_DAYS[camp] > 1;
+
+            if (isChecked) {
+                // 檢查是否超額，給予軟性提醒
+                if (isTargetMultiDay) {
+                    let limit = window.getPersonalLimit(state);
+
+                    if (state.multiDayCount >= limit) {
+                        if (!confirm(`【提醒】\n${name} 的多日營隊額度已滿 (上限 ${limit} 梯)。\n確定要強制「超額安插」至此營隊嗎？系統將會為其特別註記。`)) {
+                            ev.target.checked = false; // 恢復 UI 狀態，放棄加入
+                            return;
+                        }
+                    }
+                }
+                // 加入
+                if (!state.assignedCamps.includes(camp)) {
+                    state.assignedCamps.push(camp);
+                    if (isTargetMultiDay) state.multiDayCount++;
+                    state.rejectedCampsDetails = state.rejectedCampsDetails.filter(r => r.camp !== camp);
+                }
+            } else {
+                // 移除
+                if (state.assignedCamps.includes(camp)) {
+                    state.assignedCamps = state.assignedCamps.filter(c => c !== camp);
+                    if (isTargetMultiDay) state.multiDayCount--;
+                }
+            }
+            
+            // 由於只更新了資料，需要重新繪製左右兩邊
+            window.renderKanbanBoard();
+        }
+
+        // 單獨渲染右側營隊
+        function renderKanbanCamps() {
+            const container = document.getElementById('kanban-camps-container');
+            if (!container) return;
+
+            let html = '';
+
+            CONFIG.CAMPS.forEach(camp => {
+                const shortName = shortCampNameStr(camp);
+                const limit = globalCapacities[camp] || 0;
+                
+                let assignedVols = [];
+                Object.keys(volunteerAssignmentsMap).forEach(vName => {
+                    if (volunteerAssignmentsMap[vName].assignedCamps.includes(camp)) {
+                        assignedVols.push(volunteerAssignmentsMap[vName]);
+                    }
+                });
+                assignedVols.sort((a, b) => b.totalScore - a.totalScore);
+                
+                const count = assignedVols.length;
+                const isFull = count >= limit;
+                const headerBg = isFull ? 'bg-red-100' : 'bg-blue-100';
+                const headerText = isFull ? 'text-red-800' : 'text-blue-800';
+
+                let campCardsHtml = assignedVols.map(v => {
+                    const name = v.raw[CONFIG.NAME];
+                    const isOriginal = window.isChecked(v.raw[camp]);
+                    let tagHtml = isOriginal ? `<i class="fa-solid fa-circle text-[8px] text-blue-500 mr-1" title="原報名"></i>` : `<i class="fa-solid fa-plus text-[10px] text-orange-500 mr-1" title="額外安插"></i>`;
+                    
+                    let limit = window.getPersonalLimit(v);
+                    let isOverLimit = v.multiDayCount > limit;
+                    let overLimitTag = isOverLimit ? `<i class="fa-solid fa-triangle-exclamation text-red-500 ml-1" title="⚠️此志工已被超額安插"></i>` : '';
+
+                    return `
+                        <div draggable="true" ondragstart="window.kanbanDragStart(event, '${name}', '${camp}')" 
+                             class="kanban-card bg-white p-2.5 rounded shadow-sm border border-gray-200 mb-2 select-none hover:border-blue-300 group ${isOverLimit ? 'border-red-300 bg-red-50/30' : ''}">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-gray-800 text-sm flex items-center">${tagHtml}${name}${overLimitTag}</span>
+                                <button onclick="window.kanbanRemove(event, '${name}', '${camp}')" class="text-gray-300 hover:text-red-500 transition-colors" title="從此梯次移除">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <div class="text-[10px] text-gray-500 mt-1 flex justify-between">
+                                <span>${v.isVeteran ? '老手' : '新手'}</span>
+                                <span class="font-mono">${v.totalScore}分</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                html += `
+                    <div class="flex-shrink-0 w-64 bg-gray-100 rounded-xl flex flex-col h-full border border-gray-300 shadow-sm transition-colors"
+                         ondragover="window.kanbanAllowDrop(event)" 
+                         ondrop="window.kanbanDrop(event, '${camp}')"
+                         ondragenter="this.classList.add('kanban-drop-active')"
+                         ondragleave="this.classList.remove('kanban-drop-active')">
+                        
+                        <div class="p-3 border-b border-gray-200 ${headerBg} rounded-t-xl">
+                            <h4 class="font-bold ${headerText} mb-1 truncate text-sm" title="${shortName}">${shortName}</h4>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-600 font-medium">${CAMP_DAYS[camp] > 1 ? '多日營' : '一日營'}</span>
+                                <span class="bg-white px-2 py-0.5 rounded text-xs shadow-sm font-bold ${isFull ? 'text-red-600' : 'text-blue-600'}">${count} / ${limit}</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 kanban-col-scroll transition-colors">
+                            ${campCardsHtml || '<div class="text-center text-gray-400 text-xs mt-10 flex flex-col items-center"><i class="fa-solid fa-inbox text-2xl mb-2 opacity-30"></i>拖曳至此</div>'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function kanbanDragStart(ev, name, sourceCamp) {
+            ev.dataTransfer.setData("text/plain", JSON.stringify({ name: name, source: sourceCamp }));
+            ev.dataTransfer.effectAllowed = "move";
+            setTimeout(() => { ev.target.style.opacity = '0.4'; }, 0);
+        }
+
+        function kanbanAllowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function kanbanDrop(ev, targetCamp) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('kanban-drop-active');
+            
+            document.querySelectorAll('.kanban-card').forEach(el => el.style.opacity = '1');
+
+            const dataStr = ev.dataTransfer.getData("text/plain");
+            if (!dataStr) return;
+            
+            try {
+                const data = JSON.parse(dataStr);
+                const name = data.name;
+                const sourceCamp = data.source;
+                const state = volunteerAssignmentsMap[name];
+                
+                if (!state) return;
+                if (sourceCamp === targetCamp) return; // 原地放開，不動作
+
+                // 邏輯 1: 拖回總池 (移除)
+                if (targetCamp === 'pool') {
+                    if (sourceCamp !== 'pool') {
+                        state.assignedCamps = state.assignedCamps.filter(c => c !== sourceCamp);
+                        if (CAMP_DAYS[sourceCamp] > 1) state.multiDayCount--;
+                    }
+                } 
+                // 邏輯 2: 拖入某個營隊
+                else {
+                    if (state.assignedCamps.includes(targetCamp)) {
+                        alert(`${name} 已經在此梯次中了！`);
+                        return;
+                    }
+
+                    const isTargetMultiDay = CAMP_DAYS[targetCamp] > 1;
+
+                    // 檢查額度限制，給予軟性提醒
+                    if (isTargetMultiDay) {
+                        let limit = window.getPersonalLimit(state);
+
+                        let willExceed = false;
+                        if (sourceCamp === 'pool' || CAMP_DAYS[sourceCamp] === 1) {
+                            if (state.multiDayCount >= limit) willExceed = true;
+                        }
+
+                        if (willExceed) {
+                            if (!confirm(`【提醒】\n${name} 的多日營隊額度已滿 (上限 ${limit} 梯)。\n確定要強制「超額安插」至此營隊嗎？系統將會為其特別註記。`)) {
+                                return; // 終斷拖曳動作
+                            }
+                        }
+                    }
+
+                    if (sourceCamp !== 'pool') {
+                        state.assignedCamps = state.assignedCamps.filter(c => c !== sourceCamp);
+                        if (CAMP_DAYS[sourceCamp] > 1) state.multiDayCount--;
+                    }
+
+                    state.assignedCamps.push(targetCamp);
+                    if (isTargetMultiDay) state.multiDayCount++;
+                    state.rejectedCampsDetails = state.rejectedCampsDetails.filter(r => r.camp !== targetCamp);
+                }
+
+                window.renderKanbanBoard();
+
+            } catch (err) {
+                console.error("Drop Parse Error", err);
+            }
+        }
+
+        function kanbanRemove(ev, name, camp) {
+            ev.stopPropagation(); 
+            const state = volunteerAssignmentsMap[name];
+            if (!state) return;
+            state.assignedCamps = state.assignedCamps.filter(c => c !== camp);
+            if (CAMP_DAYS[camp] > 1) state.multiDayCount--;
+            window.renderKanbanBoard();
+        }
+
+        function exportMatchingResultsExcel() {
+            if (globalVolunteers.length === 0 || Object.keys(volunteerAssignmentsMap).length === 0) {
+                alert("沒有資料可以匯出！請先匯入資料並執行分發。");
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            const exportDataAll = globalVolunteers.map(row => {
                 const newRow = { ...row };
                 const state = volunteerAssignmentsMap[newRow[CONFIG.NAME]];
-                let assignedText = (state && state.assignedCamps.length > 0) ? state.assignedCamps.map(shortCampName).join(" ; ") : "未錄取 / 候補";
+                let assignedText = (state && state.assignedCamps.length > 0) ? state.assignedCamps.map(shortCampNameStr).join(";") : "未錄取";
                 newRow["AI幫你選 (錄取結果)"] = assignedText;
-
-                let rejectedText = (state && state.rejectedCamps.length > 0) ? state.rejectedCamps.map(shortCampName).join(" ; ") : "";
-                newRow["落選梯次"] = rejectedText;
-
-                newRow["第一志願(原始)"] = row[CONFIG.FIRST_CHOICE];
-
+                let rejectedText = (state && state.rejectedCampsDetails.length > 0) ? state.rejectedCampsDetails.map(r => `${shortCampNameStr(r.camp)}(${r.reason})`).join(";") : "";
+                newRow["落選梯次與原因"] = rejectedText;
+                newRow["系統結算總分"] = state ? state.totalScore : 0;
+                
+                // 新增超額標註欄位，方便後續觀察
+                let limit = state ? window.getPersonalLimit(state) : 0;
+                newRow["特別註記"] = (state && state.multiDayCount > limit) ? `⚠️超額安插(${state.multiDayCount}/${limit})` : "";
+                
+                newRow["多日營解析志願序"] = parsePreferenceString(row[CONFIG.FIRST_CHOICE]);
                 return newRow;
             });
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "分配總表");
-            XLSX.writeFile(wb, "2026志工分發總結果(詳細版).xlsx");
+
+            const wsAll = XLSX.utils.json_to_sheet(exportDataAll);
+            if (originalHeaders && originalHeaders.length > 0) {
+                let currentHeaders = Object.keys(exportDataAll[0]);
+                XLSX.utils.sheet_add_aoa(wsAll, [currentHeaders], { origin: "A1" });
+            }
+            XLSX.utils.book_append_sheet(wb, wsAll, "志工報名總表(含分發結果)");
+
+            let campSheetsData = {};
+            CONFIG.CAMPS.forEach(camp => {
+                let pureName = shortCampNamePure(camp);
+                campSheetsData[camp] = { pureName: pureName, list: [] };
+            });
+
+            Object.keys(volunteerAssignmentsMap).forEach(vName => {
+                const state = volunteerAssignmentsMap[vName];
+                
+                // 計算是否有超額註記
+                let exportTags = [...state.tags];
+                let limit = window.getPersonalLimit(state);
+                if (state.multiDayCount > limit) {
+                    exportTags.push(`⚠️超額安插(${state.multiDayCount}/${limit})`);
+                }
+
+                state.assignedCamps.forEach(camp => {
+                    if (campSheetsData[camp]) {
+                        campSheetsData[camp].list.push({
+                            "姓名": vName,
+                            "Email": state.raw[CONFIG.EMAIL] || "",
+                            "聯絡電話": state.raw["行動電話 ex:09XXXXXXXX"] || "",
+                            "身份": state.userCategory === "newbie" ? "第一次參加" : "老手",
+                            "經驗年資": state.raw[CONFIG.EXPERIENCE] || "",
+                            "專長": state.raw[CONFIG.SKILLS] || "",
+                            "志工小名": state.raw[CONFIG.NICKNAME] || "",
+                            "系統結算總分": state.totalScore,
+                            "備註": exportTags.join(", ")
+                        });
+                    }
+                });
+            });
+
+            CONFIG.CAMPS.forEach(camp => {
+                let sheetName = campSheetsData[camp].pureName;
+                sheetName = sheetName.substring(0, 30).replace(/[\[\]*\/\\?:]/g, ''); 
+                let list = campSheetsData[camp].list;
+                list.sort((a, b) => b["系統結算總分"] - a["系統結算總分"]);
+                if (list.length === 0) list.push({"提示": "目前無人分配至此梯次"});
+
+                const wsCamp = XLSX.utils.json_to_sheet(list);
+                let finalSheetName = sheetName;
+                let counter = 1;
+                while (wb.SheetNames.includes(finalSheetName)) {
+                    finalSheetName = `${sheetName}(${counter})`;
+                    counter++;
+                }
+                XLSX.utils.book_append_sheet(wb, wsCamp, finalSheetName);
+            });
+            XLSX.writeFile(wb, "2026志工分發總結果(多工作表).xlsx");
         }
 
         function switchTab(tab) {
@@ -1009,41 +1700,69 @@
             const mapData = (data, limit=0) => {
                 let sorted = Object.entries(data).sort((a,b) => b[1]-a[1]);
                 if(limit) sorted = sorted.slice(0, limit);
-                return { labels: sorted.map(x=>shortCampName(x[0])), values: sorted.map(x=>x[1]) };
+                return { labels: sorted.map(x=>shortCampNameStr(x[0])), values: sorted.map(x=>x[1]) };
             };
             const camps = mapData(campData);
             charts.camps = new Chart(document.getElementById('chart-camps'), { type: 'bar', data: { labels: camps.labels, datasets: [{ data: camps.values, backgroundColor: '#005696', borderRadius:4 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: {display:false} } } });
             const exp = mapData(expData);
-            charts.exp = new Chart(document.getElementById('chart-experience'), { type: 'doughnut', data: { labels: Object.keys(expData), datasets: [{ data: Object.values(expData), backgroundColor: ['#3b82f6', '#ec4899', '#f59e0b', '#10b981'] }] }, options: { maintainAspectRatio: false } });
+            charts.exp = new Chart(document.getElementById('chart-experience'), { type: 'doughnut', data: { labels: Object.keys(expData), datasets: [{ data: Object.values(expData), backgroundColor: ['#3b82f6', '#ec4899', '#f59e0b'] }] }, options: { maintainAspectRatio: false } });
         }
 
         function renderVolunteerList(list) {
             const tbody = document.getElementById('table-top-list');
-            // 修改點 4: 完整渲染志工清單
-            tbody.innerHTML = list.map((p, i) => {
-                // 抓取該志工所有勾選的梯次 (簡化名稱後串接)
+            
+            let htmlContent = list.map((p, i) => {
                 let appliedCamps = [];
                 CONFIG.CAMPS.forEach(c => {
-                    const val = String(p[c]).trim();
-                    if (val === "是" || val.toLowerCase() === "true" || val === "v") {
-                        appliedCamps.push(shortCampName(c));
-                    }
+                    if (isChecked(p[c])) appliedCamps.push(shortCampNameStr(c));
                 });
                 let appliedStr = appliedCamps.length > 0 ? appliedCamps.join("、") : "<span class='text-gray-400'>無勾選</span>";
-
-                // 處理第一志願顯示 (縮短)
-                let firstChoiceShort = String(p[CONFIG.FIRST_CHOICE] || "未填寫").substring(0, 30);
-                if (firstChoiceShort.length > 20) firstChoiceShort = shortCampName(firstChoiceShort);
+                let parsedChoice = parsePreferenceString(p[CONFIG.FIRST_CHOICE]);
+                let nameDisplay = p[CONFIG.NAME];
+                if (p._isDuplicate) nameDisplay += ` <span class="text-xs bg-red-100 text-red-600 px-1 py-0.5 rounded ml-1 font-normal">(疑似重複)</span>`;
 
                 return `
                 <tr class="hover:bg-gray-50 border-b">
                     <td class="px-6 py-3 font-bold text-gray-500">#${i+1}</td>
-                    <td class="px-6 py-3 font-bold text-gray-800 whitespace-nowrap">${p[CONFIG.NAME]}</td>
+                    <td class="px-6 py-3 font-bold text-gray-800 whitespace-nowrap">${nameDisplay}</td>
                     <td class="px-6 py-3 text-xs text-gray-600 leading-relaxed">${appliedStr}</td>
-                    <td class="px-6 py-3 text-xs text-blue-700 font-medium">${firstChoiceShort}</td>
+                    <td class="px-6 py-3 text-xs text-blue-700 font-medium">${parsedChoice}</td>
                 </tr>`;
             }).join('');
+            tbody.innerHTML = htmlContent;
         }
+
+        // 強制全域綁定所有由 HTML 呼叫的函式
+        window.switchTab = switchTab;
+        window.handleMainFile = handleMainFile;
+        window.handleImportResult = handleImportResult;
+        window.filterVolunteerList = filterVolunteerList;
+        window.exportSettings = exportSettings;
+        window.getPersonalLimit = getPersonalLimit;
+        window.runMatching = runMatching;
+        window.updateFullListDisplayAndRender = updateFullListDisplayAndRender;
+        window.filterMatchingResults = filterMatchingResults;
+        window.exportMatchingResultsExcel = exportMatchingResultsExcel;
+        window.closeVolunteerModal = closeVolunteerModal;
+        window.showVolunteerDetails = showVolunteerDetails;
+        window.toggleAllocation = toggleAllocation;
+        
+        // Kanban 全域綁定
+        window.openKanbanModal = openKanbanModal;
+        window.closeKanbanModal = closeKanbanModal;
+        window.renderKanbanBoard = renderKanbanBoard;
+        window.renderKanbanPool = renderKanbanPool;
+        window.renderKanbanCamps = renderKanbanCamps;
+        window.kanbanDragStart = kanbanDragStart;
+        window.kanbanAllowDrop = kanbanAllowDrop;
+        window.kanbanDrop = kanbanDrop;
+        window.kanbanRemove = kanbanRemove;
+        
+        // 新增：名單內嵌展開與核取功能綁定
+        window.toggleDndExpand = toggleDndExpand;
+        window.dndToggleCamp = dndToggleCamp;
+        window.isChecked = isChecked;
+
     </script>
 </body>
 </html>
