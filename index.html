@@ -110,14 +110,27 @@
                 </div>
             </div>
 
+            <!-- 第一排圖表：營隊熱度與年資 -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="card p-6">
                     <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">各梯次報名熱度 (勾選「是」的人數)</h3>
                     <div class="h-64"><canvas id="chart-camps"></canvas></div>
                 </div>
                 <div class="card p-6">
-                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">志工經驗分佈</h3>
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">志工經驗年資分佈</h3>
                     <div class="h-64 flex justify-center"><canvas id="chart-experience"></canvas></div>
+                </div>
+            </div>
+            
+            <!-- 第二排圖表：專長組別與授課意願 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card p-6">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">志工組別 (專長與興趣) 分佈</h3>
+                    <div class="h-64"><canvas id="chart-skills"></canvas></div>
+                </div>
+                <div class="card p-6">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">是否願意擔任講師比例</h3>
+                    <div class="h-64 flex justify-center"><canvas id="chart-lecturer"></canvas></div>
                 </div>
             </div>
             
@@ -430,6 +443,9 @@
             CONFIG.FIRST_CHOICE = headers.find(h => h.includes("優先順序") || h.includes("第一志願"));
             CONFIG.COURSE_DEV = headers.find(h => h.includes("課程開發") || h.includes("我有參予"));
             
+            // 新增尋找擔任講師的欄位
+            CONFIG.LECTURER = headers.find(h => h.includes("願意授課") || h.includes("擔任講師"));
+
             CONFIG.CAMPS = headers.filter(h => h.includes("是否參加") && h.includes("樂學營") && !h.includes("曾參加過"));
             
             CONFIG.CAMPS.forEach(camp => {
@@ -592,11 +608,11 @@
                     tags.push("第一次參加(新手)"); 
                     userCategory = "newbie";
                 } else if (exp.includes("1~2年") || exp.includes("1年")) { 
-                    tags.push("參加1年(老手)"); 
+                    tags.push("參加一年(老手)"); 
                     isVeteran = true;
                     userCategory = isEmployee ? "asus-vet" : "non-asus-vet";
                 } else if (exp.includes("2年") || exp.includes("3年") || exp.includes("多次") || exp.includes("以上")) { 
-                    tags.push("參加2年以上(老手)"); 
+                    tags.push("參加兩年以上(老手)"); 
                     isVeteran = true;
                     userCategory = isEmployee ? "asus-vet" : "non-asus-vet";
                 } else {
@@ -636,7 +652,10 @@
         function updateDashboard(volunteers) {
             let totalSlots = 0, firstChoiceFilled = 0;
             let campCounts = {};
-            let expStats = { "未參加過": 0, "參加1年": 0, "參加2年以上": 0 };
+            let expStats = { "第一次參加": 0, "參加一年": 0, "參加兩年以上": 0 };
+            let skillsStats = { "課程組": 0, "美輔組": 0, "攝器組": 0, "其它": 0 };
+            let lecturerStats = { "願意授課": 0, "不願意/未填": 0 };
+
             let nameCounts = {};
             let duplicateNames = new Set();
             
@@ -658,13 +677,38 @@
                 let digits = rawChoice.replace(/\D/g, '');
                 if (digits.length > 0) firstChoiceFilled++;
                 
+                // 1. 年資統計
                 let exp = String(p[CONFIG.EXPERIENCE] || "未填寫").trim();
                 if (exp.includes("未曾參加") || exp === "無" || exp.includes("未填寫")) {
-                    expStats["未參加過"]++;
+                    expStats["第一次參加"]++;
                 } else if (exp.includes("1~2年") || exp.includes("1年")) {
-                    expStats["參加1年"]++;
+                    expStats["參加一年"]++;
                 } else {
-                    expStats["參加2年以上"]++;
+                    expStats["參加兩年以上"]++;
+                }
+
+                // 2. 專長組別統計
+                let skills = String(p[CONFIG.SKILLS] || "").trim();
+                if (skills) {
+                    let sList = skills.split(/[;；]/);
+                    sList.forEach(s => {
+                        if (s.includes("課程組")) skillsStats["課程組"]++;
+                        else if (s.includes("美輔組")) skillsStats["美輔組"]++;
+                        else if (s.includes("攝器組")) skillsStats["攝器組"]++;
+                        else if (s.trim() !== "") skillsStats["其它"]++;
+                    });
+                } else {
+                    skillsStats["其它"]++;
+                }
+
+                // 3. 講師意願統計
+                if (CONFIG.LECTURER) {
+                    let lecturer = String(p[CONFIG.LECTURER] || "").trim();
+                    if (isChecked(lecturer)) {
+                        lecturerStats["願意授課"]++;
+                    } else {
+                        lecturerStats["不願意/未填"]++;
+                    }
                 }
             });
 
@@ -677,7 +721,7 @@
             document.getElementById('kpi-avg').innerText = volunteers.length ? (totalSlots/volunteers.length).toFixed(1) : 0;
             document.getElementById('kpi-first').innerText = volunteers.length ? Math.round((firstChoiceFilled/volunteers.length)*100) + "%" : "0%";
 
-            renderCharts(campCounts, expStats);
+            renderCharts(campCounts, expStats, skillsStats, lecturerStats);
             renderVolunteerList(volunteers);
         }
 
@@ -848,11 +892,11 @@
                         tags.push("第一次參加(新手)"); 
                         userCategory = "newbie";
                     } else if (exp.includes("1~2年") || exp.includes("1年")) { 
-                        tags.push("參加1年(老手)"); 
+                        tags.push("參加一年(老手)"); 
                         isVeteran = true;
                         if (isEmployee) { userCategory = "asus-vet"; } else { userCategory = "non-asus-vet"; }
                     } else if (exp.includes("2年") || exp.includes("3年") || exp.includes("多次") || exp.includes("以上")) { 
-                        tags.push("參加2年以上(老手)"); 
+                        tags.push("參加兩年以上(老手)"); 
                         isVeteran = true;
                         if (isEmployee) { userCategory = "asus-vet"; } else { userCategory = "non-asus-vet"; }
                     } else {
@@ -1694,18 +1738,42 @@
         }
 
         let charts = {};
-        function renderCharts(campData, expData) {
+        function renderCharts(campData, expData, skillsData, lecturerData) {
             Object.values(charts).forEach(c => c.destroy());
             Chart.defaults.font.family = "'Noto Sans TC', sans-serif";
-            const mapData = (data, limit=0) => {
+            
+            // 各梯次報名熱度
+            const mapCamps = (data) => {
                 let sorted = Object.entries(data).sort((a,b) => b[1]-a[1]);
-                if(limit) sorted = sorted.slice(0, limit);
                 return { labels: sorted.map(x=>shortCampNameStr(x[0])), values: sorted.map(x=>x[1]) };
             };
-            const camps = mapData(campData);
-            charts.camps = new Chart(document.getElementById('chart-camps'), { type: 'bar', data: { labels: camps.labels, datasets: [{ data: camps.values, backgroundColor: '#005696', borderRadius:4 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: {display:false} } } });
-            const exp = mapData(expData);
-            charts.exp = new Chart(document.getElementById('chart-experience'), { type: 'doughnut', data: { labels: Object.keys(expData), datasets: [{ data: Object.values(expData), backgroundColor: ['#3b82f6', '#ec4899', '#f59e0b'] }] }, options: { maintainAspectRatio: false } });
+            const camps = mapCamps(campData);
+            charts.camps = new Chart(document.getElementById('chart-camps'), { 
+                type: 'bar', 
+                data: { labels: camps.labels, datasets: [{ data: camps.values, backgroundColor: '#005696', borderRadius:4 }] }, 
+                options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: {display:false} } } 
+            });
+            
+            // 志工經驗年資
+            charts.exp = new Chart(document.getElementById('chart-experience'), { 
+                type: 'doughnut', 
+                data: { labels: Object.keys(expData), datasets: [{ data: Object.values(expData), backgroundColor: ['#3b82f6', '#ec4899', '#f59e0b'] }] }, 
+                options: { maintainAspectRatio: false } 
+            });
+
+            // 志工專長組別
+            charts.skills = new Chart(document.getElementById('chart-skills'), { 
+                type: 'bar', 
+                data: { labels: Object.keys(skillsData), datasets: [{ data: Object.values(skillsData), backgroundColor: ['#10b981', '#8b5cf6', '#6366f1', '#9ca3af'], borderRadius:4 }] }, 
+                options: { maintainAspectRatio: false, plugins: { legend: {display:false} } } 
+            });
+
+            // 是否願意擔任講師
+            charts.lecturer = new Chart(document.getElementById('chart-lecturer'), { 
+                type: 'pie', 
+                data: { labels: Object.keys(lecturerData), datasets: [{ data: Object.values(lecturerData), backgroundColor: ['#f43f5e', '#cbd5e1'] }] }, 
+                options: { maintainAspectRatio: false } 
+            });
         }
 
         function renderVolunteerList(list) {
