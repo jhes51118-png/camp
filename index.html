@@ -90,7 +90,7 @@
         </div>
 
         <!-- TAB 1: 數據儀表板 -->
-        <div id="view-dashboard" class="hidden space-y-8">
+        <div id="view-dashboard" class="hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div class="card p-6 border-l-4 border-blue-600">
                     <p class="text-gray-500 text-sm font-medium">總報名人數</p>
@@ -111,19 +111,22 @@
             </div>
 
             <!-- 第一排圖表：營隊熱度與年資 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="card p-6">
                     <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">各梯次報名熱度 (勾選「是」的人數)</h3>
                     <div class="h-64"><canvas id="chart-camps"></canvas></div>
                 </div>
-                <div class="card p-6">
-                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">志工經驗年資分佈</h3>
+                <div class="card p-6 relative">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
+                        <span>志工經驗年資分佈</span>
+                        <span class="text-xs font-normal text-blue-600 bg-blue-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-hand-pointer mr-1"></i>點擊圖表查看名單</span>
+                    </h3>
                     <div class="h-64 flex justify-center"><canvas id="chart-experience"></canvas></div>
                 </div>
             </div>
             
             <!-- 第二排圖表：專長組別與授課意願 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="card p-6 relative">
                     <h3 class="font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
                         <span>志工組別 (專長與興趣) 分佈</span>
@@ -131,9 +134,23 @@
                     </h3>
                     <div class="h-64"><canvas id="chart-skills"></canvas></div>
                 </div>
-                <div class="card p-6">
-                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">是否願意擔任講師比例</h3>
+                <div class="card p-6 relative">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
+                        <span>是否願意擔任講師比例</span>
+                        <span class="text-xs font-normal text-blue-600 bg-blue-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-hand-pointer mr-1"></i>點擊圖表查看名單</span>
+                    </h3>
                     <div class="h-64 flex justify-center"><canvas id="chart-lecturer"></canvas></div>
+                </div>
+            </div>
+
+            <!-- 第三排圖表：課程開發意願 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card p-6 relative">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
+                        <span>是否有意願參與課程開發</span>
+                        <span class="text-xs font-normal text-blue-600 bg-blue-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-hand-pointer mr-1"></i>點擊圖表查看名單</span>
+                    </h3>
+                    <div class="h-64 flex justify-center"><canvas id="chart-coursedev"></canvas></div>
                 </div>
             </div>
             
@@ -316,23 +333,23 @@
     </div>
 
     <!-- 點擊圖表彈出的組別志工名單 Modal -->
-    <div id="skill-modal" class="fixed inset-0 z-[55] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="absolute inset-0 bg-black bg-opacity-50" onclick="window.closeSkillModal()"></div>
+    <div id="chart-list-modal" class="fixed inset-0 z-[55] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black bg-opacity-50" onclick="window.closeChartListModal()"></div>
         <div class="bg-white w-full max-w-md mx-4 rounded-lg shadow-2xl z-10 transform scale-95 transition-transform duration-300 flex flex-col max-h-[85vh]">
             <div class="bg-blue-600 text-white px-5 py-3 rounded-t-lg flex justify-between items-center shadow-sm">
                 <h3 class="text-lg font-bold flex items-center">
-                    <i class="fa-solid fa-layer-group mr-2"></i>【<span id="skill-modal-title">組別</span>】志工名單
+                    <i class="fa-solid fa-layer-group mr-2"></i>【<span id="chart-list-modal-title">名單</span>】
                 </h3>
-                <button onclick="window.closeSkillModal()" class="text-white hover:text-gray-200 focus:outline-none"><i class="fa-solid fa-times text-xl"></i></button>
+                <button onclick="window.closeChartListModal()" class="text-white hover:text-gray-200 focus:outline-none"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
             <div class="p-0 overflow-y-auto flex-1">
-                <ul id="skill-modal-list" class="divide-y divide-gray-100 text-sm">
+                <ul id="chart-list-modal-list" class="divide-y divide-gray-100 text-sm">
                     <!-- JS 動態生成人員清單 -->
                 </ul>
             </div>
             <div class="bg-gray-50 px-5 py-3 rounded-b-lg flex justify-end border-t border-gray-200">
                 <span class="text-xs text-gray-500 my-auto mr-auto">點擊人員可查看詳細報名資料</span>
-                <button onclick="window.closeSkillModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1.5 px-4 rounded transition">關閉</button>
+                <button onclick="window.closeChartListModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1.5 px-4 rounded transition">關閉</button>
             </div>
         </div>
     </div>
@@ -453,7 +470,7 @@
         function isChecked(val) {
             if (val === undefined || val === null) return false;
             const s = String(val).trim().toLowerCase();
-            return s === "是" || s === "true" || s === "v" || s === "o" || s === "1" || s === "ok" || s === "yes" || s === "y";
+            return s === "是" || s === "true" || s === "v" || s === "o" || s === "1" || s === "ok" || s === "yes" || s === "y" || s === "有";
         }
 
         function detectColumns(headers) {
@@ -466,9 +483,11 @@
             CONFIG.EXPERIENCE = headers.find(h => h.includes("曾參加過")) || headers[13];
             CONFIG.SKILLS = headers.find(h => h.includes("專長或興趣")) || headers[14];
             CONFIG.FIRST_CHOICE = headers.find(h => h.includes("優先順序") || h.includes("第一志願"));
-            CONFIG.COURSE_DEV = headers.find(h => h.includes("課程開發") || h.includes("我有參予"));
             
-            // 新增尋找擔任講師的欄位
+            // 直接以欄位索引強制抓取 AB 欄 (index 27)，或是用名稱比對作為備案
+            CONFIG.COURSE_DEV = headers[27] || headers.find(h => h.includes("是否有意願參與課程開發"));
+            
+            // 新增尋找擔任講師的欄位 (僅用於圖表統計)
             CONFIG.LECTURER = headers.find(h => h.includes("願意授課") || h.includes("擔任講師"));
 
             CONFIG.CAMPS = headers.filter(h => h.includes("是否參加") && h.includes("樂學營") && !h.includes("曾參加過"));
@@ -644,6 +663,15 @@
                     userCategory = "newbie";
                 }
 
+                let isCourseDev = false;
+                if (CONFIG.COURSE_DEV && isChecked(p[CONFIG.COURSE_DEV])) {
+                    isCourseDev = true;
+                }
+                
+                if (isCourseDev) {
+                    tags.push("課程開發加分");
+                }
+
                 volunteerAssignmentsMap[pName] = { 
                     raw: p, 
                     assignedCamps: [], 
@@ -679,6 +707,7 @@
             let expStats = { "第一次參加": 0, "參加一年": 0, "參加兩年以上": 0 };
             let skillsStats = { "課程組": 0, "美輔組": 0, "攝器組": 0, "其它": 0 };
             let lecturerStats = { "願意授課": 0, "不願意/未填": 0 };
+            let courseDevStats = { "有意願": 0, "無意願/未填": 0 };
 
             let nameCounts = {};
             let duplicateNames = new Set();
@@ -703,7 +732,7 @@
                 
                 // 1. 年資統計
                 let exp = String(p[CONFIG.EXPERIENCE] || "未填寫").trim();
-                if (exp.includes("未曾參加") || exp === "無" || exp.includes("未填寫")) {
+                if (exp.includes("未曾參加") || exp === "無" || exp === "" || exp.includes("未填寫")) {
                     expStats["第一次參加"]++;
                 } else if (exp.includes("1~2年") || exp.includes("1年")) {
                     expStats["參加一年"]++;
@@ -734,6 +763,16 @@
                         lecturerStats["不願意/未填"]++;
                     }
                 }
+
+                // 4. 課程開發統計
+                if (CONFIG.COURSE_DEV) {
+                    let cdev = String(p[CONFIG.COURSE_DEV] || "").trim();
+                    if (isChecked(cdev)) {
+                        courseDevStats["有意願"]++;
+                    } else {
+                        courseDevStats["無意願/未填"]++;
+                    }
+                }
             });
 
             volunteers.forEach(p => {
@@ -745,7 +784,7 @@
             document.getElementById('kpi-avg').innerText = volunteers.length ? (totalSlots/volunteers.length).toFixed(1) : 0;
             document.getElementById('kpi-first').innerText = volunteers.length ? Math.round((firstChoiceFilled/volunteers.length)*100) + "%" : "0%";
 
-            renderCharts(campCounts, expStats, skillsStats, lecturerStats);
+            renderCharts(campCounts, expStats, skillsStats, lecturerStats, courseDevStats);
             renderVolunteerList(volunteers);
         }
 
@@ -893,15 +932,15 @@
                     let tags = [];
                     let personalScore = 0;
                     let email = String(p[CONFIG.EMAIL] || "").toLowerCase();
-                    let skills = String(p[CONFIG.SKILLS] || "");
                     let exp = String(p[CONFIG.EXPERIENCE] || "");
                     
                     let isCourseDev = false;
-                    if (skills.includes("課程組")) isCourseDev = true;
-                    if (CONFIG.COURSE_DEV && String(p[CONFIG.COURSE_DEV] || "").includes("是")) isCourseDev = true;
+                    if (CONFIG.COURSE_DEV && isChecked(p[CONFIG.COURSE_DEV])) {
+                        isCourseDev = true;
+                    }
 
                     if (isCourseDev) { 
-                        tags.push("課程開發"); 
+                        tags.push("課程開發加分"); 
                         personalScore += globalWeights["5.課程開發組"]; 
                     }
 
@@ -1285,7 +1324,6 @@
             }
         }
 
-        // 修改：支援尚未分發時的資料顯示
         function showVolunteerDetails(name) {
             let state = volunteerAssignmentsMap[name];
             let raw = null;
@@ -1294,7 +1332,6 @@
             if (state) {
                 raw = state.raw;
             } else {
-                // 如果還沒跑過分發，從全域資料找
                 raw = globalVolunteers.find(v => v[CONFIG.NAME] === name);
                 if (!raw) return;
             }
@@ -1342,7 +1379,6 @@
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modal.querySelector('div.transform').classList.remove('scale-95');
             modal.querySelector('div.transform').classList.add('scale-100');
-            // Ensure z-index is highest if opened from another modal
             modal.style.zIndex = "70";
             document.body.classList.add('modal-active');
         }
@@ -1353,32 +1389,50 @@
             modal.querySelector('div.transform').classList.add('scale-95');
             modal.querySelector('div.transform').classList.remove('scale-100');
             
-            // 如果其他 Modal 還開著，不要移除 body 的 modal-active
-            const isSkillModalOpen = !document.getElementById('skill-modal').classList.contains('opacity-0');
+            const isChartListModalOpen = !document.getElementById('chart-list-modal').classList.contains('opacity-0');
             const isKanbanModalOpen = !document.getElementById('kanban-modal').classList.contains('opacity-0');
-            if (!isSkillModalOpen && !isKanbanModalOpen) {
+            if (!isChartListModalOpen && !isKanbanModalOpen) {
                 document.body.classList.remove('modal-active');
             }
         }
 
         // ==========================================
-        // 新增：組別志工名單 Modal 邏輯
+        // 圖表點擊彈出名單 Modal 邏輯
         // ==========================================
+        function openChartListModal(type, value) {
+            const modal = document.getElementById('chart-list-modal');
+            document.getElementById('chart-list-modal-title').innerText = `${type}: ${value}`;
 
-        function openSkillModal(skillName) {
-            const modal = document.getElementById('skill-modal');
-            document.getElementById('skill-modal-title').innerText = skillName;
-
-            const listEl = document.getElementById('skill-modal-list');
+            const listEl = document.getElementById('chart-list-modal-list');
             listEl.innerHTML = '';
 
             let filteredVols = globalVolunteers.filter(p => {
-                let skills = String(p[CONFIG.SKILLS] || "").trim();
-                if (skillName === '其它') {
-                    return !skills.includes('課程組') && !skills.includes('美輔組') && !skills.includes('攝器組');
-                } else {
-                    return skills.includes(skillName);
+                if (type === '專長組別') {
+                    let skills = String(p[CONFIG.SKILLS] || "").trim();
+                    if (value === '其它') {
+                        return !skills.includes('課程組') && !skills.includes('美輔組') && !skills.includes('攝器組');
+                    } else {
+                        return skills.includes(value);
+                    }
+                } else if (type === '經驗年資') {
+                    let exp = String(p[CONFIG.EXPERIENCE] || "未填寫").trim();
+                    if (value === '第一次參加') {
+                        return exp.includes("未曾參加") || exp === "無" || exp === "" || exp.includes("未填寫");
+                    } else if (value === '參加一年') {
+                        return exp.includes("1~2年") || exp.includes("1年");
+                    } else if (value === '參加兩年以上') {
+                        return exp.includes("2年") || exp.includes("3年") || exp.includes("多次") || exp.includes("以上");
+                    }
+                } else if (type === '擔任講師') {
+                    let lecturer = String(p[CONFIG.LECTURER] || "").trim();
+                    let isWilling = isChecked(lecturer);
+                    return value === '願意授課' ? isWilling : !isWilling;
+                } else if (type === '課程開發') {
+                    let cdev = String(p[CONFIG.COURSE_DEV] || "").trim();
+                    let isWilling = isChecked(cdev);
+                    return value === '有意願' ? isWilling : !isWilling;
                 }
+                return false;
             });
 
             if(filteredVols.length === 0) {
@@ -1405,8 +1459,8 @@
             document.body.classList.add('modal-active');
         }
 
-        function closeSkillModal() {
-            const modal = document.getElementById('skill-modal');
+        function closeChartListModal() {
+            const modal = document.getElementById('chart-list-modal');
             modal.classList.add('opacity-0', 'pointer-events-none');
             modal.querySelector('div.transform').classList.add('scale-95');
             modal.querySelector('div.transform').classList.remove('scale-100');
@@ -1450,7 +1504,7 @@
                 document.body.classList.remove('modal-active');
             }
             
-            window.updateFullListDisplayAndRender(); // 關閉時同步更新主儀表板資料
+            window.updateFullListDisplayAndRender();
         }
 
         function renderKanbanBoard() {
@@ -1829,9 +1883,14 @@
         }
 
         let charts = {};
-        function renderCharts(campData, expData, skillsData, lecturerData) {
+        function renderCharts(campData, expData, skillsData, lecturerData, courseDevData) {
             Object.values(charts).forEach(c => c.destroy());
             Chart.defaults.font.family = "'Noto Sans TC', sans-serif";
+            
+            // 共用的游標樣式變更邏輯
+            const pointerOnHover = (event, chartElement) => {
+                event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+            };
             
             // 各梯次報名熱度
             const mapCamps = (data) => {
@@ -1845,11 +1904,21 @@
                 options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: {display:false} } } 
             });
             
-            // 志工經驗年資
+            // 志工經驗年資 (加入點擊事件)
             charts.exp = new Chart(document.getElementById('chart-experience'), { 
                 type: 'doughnut', 
                 data: { labels: Object.keys(expData), datasets: [{ data: Object.values(expData), backgroundColor: ['#3b82f6', '#ec4899', '#f59e0b'] }] }, 
-                options: { maintainAspectRatio: false } 
+                options: { 
+                    maintainAspectRatio: false,
+                    onHover: pointerOnHover,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const label = charts.exp.data.labels[index];
+                            window.openChartListModal('經驗年資', label);
+                        }
+                    }
+                } 
             });
 
             // 志工專長組別 (加入點擊事件)
@@ -1859,24 +1928,49 @@
                 options: { 
                     maintainAspectRatio: false, 
                     plugins: { legend: {display:false} },
-                    onHover: (event, chartElement) => {
-                        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
-                    },
+                    onHover: pointerOnHover,
                     onClick: (event, elements) => {
                         if (elements.length > 0) {
                             const index = elements[0].index;
                             const label = charts.skills.data.labels[index];
-                            window.openSkillModal(label);
+                            window.openChartListModal('專長組別', label);
                         }
                     }
                 } 
             });
 
-            // 是否願意擔任講師
+            // 是否願意擔任講師 (加入點擊事件)
             charts.lecturer = new Chart(document.getElementById('chart-lecturer'), { 
                 type: 'pie', 
                 data: { labels: Object.keys(lecturerData), datasets: [{ data: Object.values(lecturerData), backgroundColor: ['#f43f5e', '#cbd5e1'] }] }, 
-                options: { maintainAspectRatio: false } 
+                options: { 
+                    maintainAspectRatio: false,
+                    onHover: pointerOnHover,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const label = charts.lecturer.data.labels[index];
+                            window.openChartListModal('擔任講師', label);
+                        }
+                    }
+                } 
+            });
+
+            // 新增：是否有意願參與課程開發 (加入點擊事件)
+            charts.coursedev = new Chart(document.getElementById('chart-coursedev'), { 
+                type: 'pie', 
+                data: { labels: Object.keys(courseDevData), datasets: [{ data: Object.values(courseDevData), backgroundColor: ['#0ea5e9', '#e2e8f0'] }] }, 
+                options: { 
+                    maintainAspectRatio: false,
+                    onHover: pointerOnHover,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const label = charts.coursedev.data.labels[index];
+                            window.openChartListModal('課程開發', label);
+                        }
+                    }
+                } 
             });
         }
 
@@ -1918,8 +2012,8 @@
         
         window.closeVolunteerModal = closeVolunteerModal;
         window.showVolunteerDetails = showVolunteerDetails;
-        window.openSkillModal = openSkillModal;
-        window.closeSkillModal = closeSkillModal;
+        window.openChartListModal = openChartListModal;
+        window.closeChartListModal = closeChartListModal;
         
         window.toggleAllocation = toggleAllocation;
         
