@@ -124,8 +124,11 @@
             
             <!-- 第二排圖表：專長組別與授課意願 -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="card p-6">
-                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">志工組別 (專長與興趣) 分佈</h3>
+                <div class="card p-6 relative">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
+                        <span>志工組別 (專長與興趣) 分佈</span>
+                        <span class="text-xs font-normal text-blue-600 bg-blue-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-hand-pointer mr-1"></i>點擊柱狀圖查看名單</span>
+                    </h3>
                     <div class="h-64"><canvas id="chart-skills"></canvas></div>
                 </div>
                 <div class="card p-6">
@@ -312,11 +315,33 @@
         </div>
     </div>
 
-    <!-- 志工詳細資料 Modal (原版) -->
+    <!-- 點擊圖表彈出的組別志工名單 Modal -->
+    <div id="skill-modal" class="fixed inset-0 z-[55] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black bg-opacity-50" onclick="window.closeSkillModal()"></div>
+        <div class="bg-white w-full max-w-md mx-4 rounded-lg shadow-2xl z-10 transform scale-95 transition-transform duration-300 flex flex-col max-h-[85vh]">
+            <div class="bg-blue-600 text-white px-5 py-3 rounded-t-lg flex justify-between items-center shadow-sm">
+                <h3 class="text-lg font-bold flex items-center">
+                    <i class="fa-solid fa-layer-group mr-2"></i>【<span id="skill-modal-title">組別</span>】志工名單
+                </h3>
+                <button onclick="window.closeSkillModal()" class="text-white hover:text-gray-200 focus:outline-none"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-0 overflow-y-auto flex-1">
+                <ul id="skill-modal-list" class="divide-y divide-gray-100 text-sm">
+                    <!-- JS 動態生成人員清單 -->
+                </ul>
+            </div>
+            <div class="bg-gray-50 px-5 py-3 rounded-b-lg flex justify-end border-t border-gray-200">
+                <span class="text-xs text-gray-500 my-auto mr-auto">點擊人員可查看詳細報名資料</span>
+                <button onclick="window.closeSkillModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1.5 px-4 rounded transition">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 志工詳細資料 Modal -->
     <div id="volunteer-modal" class="fixed inset-0 z-[60] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="absolute inset-0 bg-black bg-opacity-50" onclick="window.closeVolunteerModal()"></div>
         <div class="bg-white w-full max-w-lg mx-4 rounded-lg shadow-2xl z-10 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
-            <div class="bg-asus-blue text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
+            <div class="bg-asus-blue text-white px-6 py-4 rounded-t-lg flex justify-between items-center shadow-sm">
                 <h3 class="text-xl font-bold" id="modal-name">志工姓名</h3>
                 <button onclick="window.closeVolunteerModal()" class="text-white hover:text-gray-200 focus:outline-none"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
@@ -325,7 +350,7 @@
                 <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
                     <div><p class="text-gray-500 mb-1">Email</p><p id="modal-email" class="font-bold text-gray-800 break-all">-</p></div>
                     <div><p class="text-gray-500 mb-1">經驗年資</p><p id="modal-exp" class="font-bold text-gray-800">-</p></div>
-                    <div class="col-span-2"><p class="text-gray-500 mb-1">專長或興趣</p><p id="modal-skills" class="font-bold text-gray-800">-</p></div>
+                    <div class="col-span-2"><p class="text-gray-500 mb-1">專長或興趣 (組別)</p><p id="modal-skills" class="font-bold text-gray-800 leading-relaxed">-</p></div>
                     <div class="col-span-2"><p class="text-gray-500 mb-1">多日營志願排序</p><p id="modal-first-choice" class="font-bold text-blue-700">-</p></div>
                 </div>
                 <div class="border-t border-gray-200 pt-4">
@@ -333,8 +358,8 @@
                     <ul id="modal-camps-list" class="space-y-2 text-sm"></ul>
                 </div>
             </div>
-            <div class="bg-gray-50 px-6 py-3 rounded-b-lg flex justify-end">
-                <button onclick="window.closeVolunteerModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">關閉</button>
+            <div class="bg-gray-50 px-6 py-3 rounded-b-lg flex justify-end border-t border-gray-200">
+                <button onclick="window.closeVolunteerModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition">關閉</button>
             </div>
         </div>
     </div>
@@ -599,8 +624,7 @@
                 let tags = ["匯入資料"];
                 let exp = String(p[CONFIG.EXPERIENCE] || "").trim();
                 let email = String(p[CONFIG.EMAIL] || "").toLowerCase();
-                let isEmployee = email.includes("asus") || (!email.includes("gmail") && !email.includes("yahoo") && !email.includes("hotmail") && email !== ""); 
-                if (email.includes("pegatron")) isEmployee = false;
+                let isEmployee = email.includes("@asus.com"); 
 
                 let isVeteran = false;
                 let userCategory = "newbie";
@@ -791,7 +815,6 @@
             XLSX.writeFile(wb, "2026志工媒合系統設定.xlsx");
         }
 
-        // 新增：共用的個人上限取得函數
         function getPersonalLimit(state) {
             let limitNewbie = parseInt(document.getElementById('limit-newbie').value) || 1;
             let limitAsusVet = parseInt(document.getElementById('limit-asus-vet').value) || 2;
@@ -885,8 +908,7 @@
                     let isVeteran = false;
                     let userCategory = "newbie"; 
 
-                    let isEmployee = email.includes("asus") || (!email.includes("gmail") && !email.includes("yahoo") && !email.includes("hotmail") && email !== ""); 
-                    if (email.includes("pegatron")) isEmployee = false; 
+                    let isEmployee = email.includes("@asus.com"); 
 
                     if (exp.includes("未曾參加") || exp === "無" || exp.includes("未填寫")) {
                         tags.push("第一次參加(新手)"); 
@@ -1263,12 +1285,22 @@
             }
         }
 
+        // 修改：支援尚未分發時的資料顯示
         function showVolunteerDetails(name) {
-            const state = volunteerAssignmentsMap[name];
-            if (!state) return;
-            const raw = state.raw;
+            let state = volunteerAssignmentsMap[name];
+            let raw = null;
+            let isMatched = Object.keys(volunteerAssignmentsMap).length > 0;
+
+            if (state) {
+                raw = state.raw;
+            } else {
+                // 如果還沒跑過分發，從全域資料找
+                raw = globalVolunteers.find(v => v[CONFIG.NAME] === name);
+                if (!raw) return;
+            }
+
             document.getElementById('modal-name').innerText = name;
-            document.getElementById('modal-tags').innerText = state.tags.join("、") || "無特殊標籤";
+            document.getElementById('modal-tags').innerText = state ? state.tags.join("、") : "尚未分發，無標籤";
             document.getElementById('modal-email').innerText = raw[CONFIG.EMAIL] || "未填寫";
             document.getElementById('modal-exp').innerText = raw[CONFIG.EXPERIENCE] || "未填寫";
             document.getElementById('modal-skills').innerText = raw[CONFIG.SKILLS] || "未填寫";
@@ -1280,20 +1312,25 @@
             CONFIG.CAMPS.forEach(c => {
                 if (isChecked(raw[c])) {
                     hasCamps = true;
-                    const isAssigned = state.assignedCamps.includes(c);
-                    let rejectReasonObj = state.rejectedCampsDetails.find(r => r.camp === c);
                     let badge = '';
-                    
-                    if (isAssigned) {
-                        badge = `<span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded ml-2">已錄取</span>`;
-                    } else if (rejectReasonObj) {
-                        if (rejectReasonObj.reason.includes("上限")) {
-                            badge = `<span class="badge-limit ml-2">超過上限</span>`;
-                        } else {
-                            badge = `<span class="bg-red-100 text-red-500 text-xs px-2 py-0.5 rounded ml-2">落選 (額滿)</span>`;
-                        }
+
+                    if (!isMatched) {
+                        badge = `<span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded ml-2">已勾選 (未分發)</span>`;
                     } else {
-                        badge = `<span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded ml-2">未錄取</span>`;
+                        const isAssigned = state.assignedCamps.includes(c);
+                        let rejectReasonObj = state.rejectedCampsDetails.find(r => r.camp === c);
+                        
+                        if (isAssigned) {
+                            badge = `<span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded ml-2">已錄取</span>`;
+                        } else if (rejectReasonObj) {
+                            if (rejectReasonObj.reason.includes("上限")) {
+                                badge = `<span class="badge-limit ml-2">超過上限</span>`;
+                            } else {
+                                badge = `<span class="bg-red-100 text-red-500 text-xs px-2 py-0.5 rounded ml-2">落選 (額滿)</span>`;
+                            }
+                        } else {
+                            badge = `<span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded ml-2">未錄取</span>`;
+                        }
                     }
                     
                     listEl.innerHTML += `<li class="flex items-start justify-between border-b border-gray-100 py-2 last:border-0"><span class="text-gray-700">${shortCampNameStr(c)}</span>${badge}</li>`;
@@ -1305,6 +1342,8 @@
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modal.querySelector('div.transform').classList.remove('scale-95');
             modal.querySelector('div.transform').classList.add('scale-100');
+            // Ensure z-index is highest if opened from another modal
+            modal.style.zIndex = "70";
             document.body.classList.add('modal-active');
         }
 
@@ -1313,7 +1352,69 @@
             modal.classList.add('opacity-0', 'pointer-events-none');
             modal.querySelector('div.transform').classList.add('scale-95');
             modal.querySelector('div.transform').classList.remove('scale-100');
-            document.body.classList.remove('modal-active');
+            
+            // 如果其他 Modal 還開著，不要移除 body 的 modal-active
+            const isSkillModalOpen = !document.getElementById('skill-modal').classList.contains('opacity-0');
+            const isKanbanModalOpen = !document.getElementById('kanban-modal').classList.contains('opacity-0');
+            if (!isSkillModalOpen && !isKanbanModalOpen) {
+                document.body.classList.remove('modal-active');
+            }
+        }
+
+        // ==========================================
+        // 新增：組別志工名單 Modal 邏輯
+        // ==========================================
+
+        function openSkillModal(skillName) {
+            const modal = document.getElementById('skill-modal');
+            document.getElementById('skill-modal-title').innerText = skillName;
+
+            const listEl = document.getElementById('skill-modal-list');
+            listEl.innerHTML = '';
+
+            let filteredVols = globalVolunteers.filter(p => {
+                let skills = String(p[CONFIG.SKILLS] || "").trim();
+                if (skillName === '其它') {
+                    return !skills.includes('課程組') && !skills.includes('美輔組') && !skills.includes('攝器組');
+                } else {
+                    return skills.includes(skillName);
+                }
+            });
+
+            if(filteredVols.length === 0) {
+                listEl.innerHTML = '<li class="p-4 text-center text-gray-500">無志工資料</li>';
+            } else {
+                filteredVols.forEach(v => {
+                    let name = v[CONFIG.NAME];
+                    let exp = v[CONFIG.EXPERIENCE] || "未填寫";
+                    listEl.innerHTML += `
+                        <li class="p-3 hover:bg-blue-50 cursor-pointer flex justify-between items-center transition-colors" onclick="window.showVolunteerDetails('${name}')">
+                            <div>
+                                <p class="font-bold text-gray-800">${name}</p>
+                                <p class="text-xs text-gray-500">${exp}</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-gray-400"></i>
+                        </li>
+                    `;
+                });
+            }
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('div.transform').classList.remove('scale-95');
+            modal.querySelector('div.transform').classList.add('scale-100');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeSkillModal() {
+            const modal = document.getElementById('skill-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('div.transform').classList.add('scale-95');
+            modal.querySelector('div.transform').classList.remove('scale-100');
+            
+            const isVolunteerModalOpen = !document.getElementById('volunteer-modal').classList.contains('opacity-0');
+            if (!isVolunteerModalOpen) {
+                document.body.classList.remove('modal-active');
+            }
         }
 
         // ==========================================
@@ -1343,7 +1444,12 @@
             modal.classList.add('opacity-0', 'pointer-events-none');
             modal.querySelector('div.transform').classList.add('scale-95');
             modal.querySelector('div.transform').classList.remove('scale-100');
-            document.body.classList.remove('modal-active');
+            
+            const isVolunteerModalOpen = !document.getElementById('volunteer-modal').classList.contains('opacity-0');
+            if (!isVolunteerModalOpen) {
+                document.body.classList.remove('modal-active');
+            }
+            
             window.updateFullListDisplayAndRender(); // 關閉時同步更新主儀表板資料
         }
 
@@ -1352,18 +1458,16 @@
             window.renderKanbanCamps();
         }
 
-        // 獨立切換某位志工的編輯面板展開狀態
         function toggleDndExpand(ev, name) {
             ev.stopPropagation();
             if (expandedDndVolunteer === name) {
-                expandedDndVolunteer = null; // 點擊第二次收合
+                expandedDndVolunteer = null; 
             } else {
-                expandedDndVolunteer = name; // 展開
+                expandedDndVolunteer = name; 
             }
-            window.renderKanbanPool(); // 重新渲染名單區
+            window.renderKanbanPool(); 
         }
 
-        // 單獨渲染總池 (包含內嵌核取方塊的邏輯)
         function renderKanbanPool() {
             const listEl = document.getElementById('kanban-pool-list');
             if (!listEl) return;
@@ -1393,14 +1497,12 @@
                 
                 const isExpanded = expandedDndVolunteer === name;
                 
-                // 編輯按鈕
                 let expandBtn = `
                     <button onclick="window.toggleDndExpand(event, '${name}')" class="text-[11px] bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 px-2 py-1 rounded transition-colors border border-gray-200 hover:border-blue-300 flex items-center shadow-sm">
                         <i class="fa-solid fa-list-check mr-1"></i> 編輯梯次
                     </button>
                 `;
 
-                // 展開後的梯次核取方塊
                 let expandedHtml = '';
                 if (isExpanded) {
                     let checkboxes = CONFIG.CAMPS.map(camp => {
@@ -1447,7 +1549,6 @@
             listEl.innerHTML = poolCardsHtml || '<div class="text-center text-gray-400 text-xs mt-4">無符合條件的志工</div>';
         }
 
-        // 新增：處理核取方塊的勾選/取消事件
         function dndToggleCamp(ev, name, camp, isChecked) {
             ev.stopPropagation();
             const state = volunteerAssignmentsMap[name];
@@ -1456,36 +1557,31 @@
             const isTargetMultiDay = CAMP_DAYS[camp] > 1;
 
             if (isChecked) {
-                // 檢查是否超額，給予軟性提醒
                 if (isTargetMultiDay) {
                     let limit = window.getPersonalLimit(state);
 
                     if (state.multiDayCount >= limit) {
                         if (!confirm(`【提醒】\n${name} 的多日營隊額度已滿 (上限 ${limit} 梯)。\n確定要強制「超額安插」至此營隊嗎？系統將會為其特別註記。`)) {
-                            ev.target.checked = false; // 恢復 UI 狀態，放棄加入
+                            ev.target.checked = false; 
                             return;
                         }
                     }
                 }
-                // 加入
                 if (!state.assignedCamps.includes(camp)) {
                     state.assignedCamps.push(camp);
                     if (isTargetMultiDay) state.multiDayCount++;
                     state.rejectedCampsDetails = state.rejectedCampsDetails.filter(r => r.camp !== camp);
                 }
             } else {
-                // 移除
                 if (state.assignedCamps.includes(camp)) {
                     state.assignedCamps = state.assignedCamps.filter(c => c !== camp);
                     if (isTargetMultiDay) state.multiDayCount--;
                 }
             }
             
-            // 由於只更新了資料，需要重新繪製左右兩邊
             window.renderKanbanBoard();
         }
 
-        // 單獨渲染右側營隊
         function renderKanbanCamps() {
             const container = document.getElementById('kanban-camps-container');
             if (!container) return;
@@ -1522,7 +1618,7 @@
                         <div draggable="true" ondragstart="window.kanbanDragStart(event, '${name}', '${camp}')" 
                              class="kanban-card bg-white p-2.5 rounded shadow-sm border border-gray-200 mb-2 select-none hover:border-blue-300 group ${isOverLimit ? 'border-red-300 bg-red-50/30' : ''}">
                             <div class="flex justify-between items-center">
-                                <span class="font-bold text-gray-800 text-sm flex items-center">${tagHtml}${name}${overLimitTag}</span>
+                                <span class="font-bold text-gray-800 text-sm flex items-center cursor-pointer hover:text-blue-600" onclick="window.showVolunteerDetails('${name}')" title="查看詳細資料">${tagHtml}${name}${overLimitTag}</span>
                                 <button onclick="window.kanbanRemove(event, '${name}', '${camp}')" class="text-gray-300 hover:text-red-500 transition-colors" title="從此梯次移除">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
@@ -1585,16 +1681,14 @@
                 const state = volunteerAssignmentsMap[name];
                 
                 if (!state) return;
-                if (sourceCamp === targetCamp) return; // 原地放開，不動作
+                if (sourceCamp === targetCamp) return; 
 
-                // 邏輯 1: 拖回總池 (移除)
                 if (targetCamp === 'pool') {
                     if (sourceCamp !== 'pool') {
                         state.assignedCamps = state.assignedCamps.filter(c => c !== sourceCamp);
                         if (CAMP_DAYS[sourceCamp] > 1) state.multiDayCount--;
                     }
                 } 
-                // 邏輯 2: 拖入某個營隊
                 else {
                     if (state.assignedCamps.includes(targetCamp)) {
                         alert(`${name} 已經在此梯次中了！`);
@@ -1603,7 +1697,6 @@
 
                     const isTargetMultiDay = CAMP_DAYS[targetCamp] > 1;
 
-                    // 檢查額度限制，給予軟性提醒
                     if (isTargetMultiDay) {
                         let limit = window.getPersonalLimit(state);
 
@@ -1614,7 +1707,7 @@
 
                         if (willExceed) {
                             if (!confirm(`【提醒】\n${name} 的多日營隊額度已滿 (上限 ${limit} 梯)。\n確定要強制「超額安插」至此營隊嗎？系統將會為其特別註記。`)) {
-                                return; // 終斷拖曳動作
+                                return; 
                             }
                         }
                     }
@@ -1662,7 +1755,6 @@
                 newRow["落選梯次與原因"] = rejectedText;
                 newRow["系統結算總分"] = state ? state.totalScore : 0;
                 
-                // 新增超額標註欄位，方便後續觀察
                 let limit = state ? window.getPersonalLimit(state) : 0;
                 newRow["特別註記"] = (state && state.multiDayCount > limit) ? `⚠️超額安插(${state.multiDayCount}/${limit})` : "";
                 
@@ -1686,7 +1778,6 @@
             Object.keys(volunteerAssignmentsMap).forEach(vName => {
                 const state = volunteerAssignmentsMap[vName];
                 
-                // 計算是否有超額註記
                 let exportTags = [...state.tags];
                 let limit = window.getPersonalLimit(state);
                 if (state.multiDayCount > limit) {
@@ -1761,11 +1852,24 @@
                 options: { maintainAspectRatio: false } 
             });
 
-            // 志工專長組別
+            // 志工專長組別 (加入點擊事件)
             charts.skills = new Chart(document.getElementById('chart-skills'), { 
                 type: 'bar', 
                 data: { labels: Object.keys(skillsData), datasets: [{ data: Object.values(skillsData), backgroundColor: ['#10b981', '#8b5cf6', '#6366f1', '#9ca3af'], borderRadius:4 }] }, 
-                options: { maintainAspectRatio: false, plugins: { legend: {display:false} } } 
+                options: { 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: {display:false} },
+                    onHover: (event, chartElement) => {
+                        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const label = charts.skills.data.labels[index];
+                            window.openSkillModal(label);
+                        }
+                    }
+                } 
             });
 
             // 是否願意擔任講師
@@ -1790,9 +1894,9 @@
                 if (p._isDuplicate) nameDisplay += ` <span class="text-xs bg-red-100 text-red-600 px-1 py-0.5 rounded ml-1 font-normal">(疑似重複)</span>`;
 
                 return `
-                <tr class="hover:bg-gray-50 border-b">
+                <tr class="hover:bg-gray-50 border-b cursor-pointer transition-colors" onclick="window.showVolunteerDetails('${p[CONFIG.NAME]}')">
                     <td class="px-6 py-3 font-bold text-gray-500">#${i+1}</td>
-                    <td class="px-6 py-3 font-bold text-gray-800 whitespace-nowrap">${nameDisplay}</td>
+                    <td class="px-6 py-3 font-bold text-gray-800 whitespace-nowrap text-blue-600 hover:underline">${nameDisplay}</td>
                     <td class="px-6 py-3 text-xs text-gray-600 leading-relaxed">${appliedStr}</td>
                     <td class="px-6 py-3 text-xs text-blue-700 font-medium">${parsedChoice}</td>
                 </tr>`;
@@ -1811,11 +1915,14 @@
         window.updateFullListDisplayAndRender = updateFullListDisplayAndRender;
         window.filterMatchingResults = filterMatchingResults;
         window.exportMatchingResultsExcel = exportMatchingResultsExcel;
+        
         window.closeVolunteerModal = closeVolunteerModal;
         window.showVolunteerDetails = showVolunteerDetails;
+        window.openSkillModal = openSkillModal;
+        window.closeSkillModal = closeSkillModal;
+        
         window.toggleAllocation = toggleAllocation;
         
-        // Kanban 全域綁定
         window.openKanbanModal = openKanbanModal;
         window.closeKanbanModal = closeKanbanModal;
         window.renderKanbanBoard = renderKanbanBoard;
@@ -1826,7 +1933,6 @@
         window.kanbanDrop = kanbanDrop;
         window.kanbanRemove = kanbanRemove;
         
-        // 新增：名單內嵌展開與核取功能綁定
         window.toggleDndExpand = toggleDndExpand;
         window.dndToggleCamp = dndToggleCamp;
         window.isChecked = isChecked;
